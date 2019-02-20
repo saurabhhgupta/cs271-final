@@ -27,7 +27,20 @@ class Block(object):
 	# 	for transaction in self.transactions:
 	# 		print(str(transaction))
 
+class State(object):
+	def __init__(self):
+		self.current_term = 0
+		self.voted_for = None
+		self.log = []
+		self.commit_index = 0
+		self.last_applied = 0
+		self.next_index = 0
+		self.match_index = 0
+
 def parse_config(json_file):
 	with open(str(json_file), "r") as file:
 		# parse and assign to global values
 		return
+
+if __name__ == "__main__":
+	main()
