@@ -1,4 +1,7 @@
+# encoding=utf8
+
 import hashlib
+import string
 
 '''
 General hash function that returns a HASHED string
@@ -10,16 +13,15 @@ def hash(data):
 txA and txB are two transactions where each transaction is a string in the format: ”A B amount” 
 (which means A sends B an amount of 5). And there are exactly two transactions in each list of transactions(in each block).
 '''
-
 class Transaction(object):
-	def __init__(self, amount, destination):
+	def __init__(self, source, destination, amount):
 		self.amount = int(amount)
-		self.source = None
+		self.source = str(source)
 		self.destination = str(destination)
 
 	# Will most likely need a function to return the transaction itself.
 	def __repr__(self):
-		transaction = "money_transfer({}, {}, {})".format(self.amount, self.source, self.destination)
+		transaction = "{} {} {}".format(self.source, self.destination, self.amount)
 		return transaction
 
 class Header(object):
@@ -66,11 +68,28 @@ class Block(object):
 
 
 class Chain(object):
-	def __init__(self, block):
+	def __init__(self):
 		self.chain = []
 
+	'''
+	Assumes \n delimiter for triplets
+	Returns list of transactions
+	'''
 	def parseInitFile(self, file):
-		
+		transactionList = []
+		with open(file, 'r') as configFile:
+			line = configFile.readline()
+			while line:
+				line = line.strip('\n()')
+				print line
+				source, destination, amount = line.split(',')
+				transaction = Transaction(source, destination, int(amount))
+				transactionList.append(transaction)
+				line = configFile.readline()
+		return transactionList
+
+	def initBlockChain(self, inputTransactions):
+		print inputTransactions
 		# TODO: 
 		# 1) parse the file (file.readlines(), x = line.split(' '), x[0] = sender, x[1] = destination, x[2] = amount)
 		# 2) create the chain (using attributes above)
@@ -78,3 +97,8 @@ class Chain(object):
 
 	def printChain(self):
 		print self.chain
+
+blockchain = Chain()
+transactionList = blockchain.parseInitFile('test_config.txt')
+blockchain.initBlockChain(transactionList)
+	
