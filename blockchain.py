@@ -1,3 +1,5 @@
+import hashlib
+
 '''
 txA and txB are two transactions where each transaction is a string in the format: ”A B amount” 
 (which means A sends B an amount of 5). And there are exactly two transactions in each list of transactions(in each block).
@@ -12,10 +14,11 @@ class Transaction(object):
 	def __repr__(self):
 		transaction = "money_transfer({}, {}, {})".format(self.amount, self.source, self.destination)
 		return transaction
-		
+
 
 class Header(object):
-	def __init__(self):
+	'''txA and txB must be HASHED strings (SHA256).'''
+	def __init__(self, txA, txB):
 		'''
 		Current term represents the term being used in Raft.
 		'''
@@ -30,7 +33,8 @@ class Header(object):
 		HlistOfTxs(B) uses the Merkel Tree data structure, 
 		which is a SHA256 hash of the concatenation of two SHA256 hashes of two transactions.
 		'''
-		self.listOfTxs = []
+		self.hashListOfTxs = hashlib.sha256(txA + txB).hexdigest()
+
 
 		'''
 		The nonce is a random string such that: Taking the SHA256 of the concatenation of HListOfTxs(H(X)||H(Y)) of the current block 
@@ -42,6 +46,7 @@ class Header(object):
 		'''
 		self.nonce = None
 
+
 class Block(object):
 	def __init__(self, transactions, header, proposer):
 		self.transactions = transactions
@@ -52,6 +57,7 @@ class Block(object):
 	# def printBlock(self):
 	# 	for transaction in self.transactions:
 	# 		print(str(transaction))
+
 
 class Chain(object):
 	def __init__(self, block):
