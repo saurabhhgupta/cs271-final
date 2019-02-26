@@ -99,7 +99,7 @@ class RaftClient():
 
         while True:
             tcpClient.listen(4) 
-            (conn, (cliIP,cliPort)) = tcpClient.accept()
+            (conn, (cliIP, cliPort)) = tcpClient.accept()
             
             data = conn.recv(BUFFER_SIZE)
             msgType, msg = self.parseRecvMsg(data)
