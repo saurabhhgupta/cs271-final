@@ -226,27 +226,52 @@ class RaftClient():
 
 
     def requestTicketsFromUser(self): 
-        '''Take request from user and request tickets from server''' 
+        '''Prompt user for options'''
         while True:
             try:
-                displayMsg = "\nChoose an option:\na) Press 1 to buy tickets.\nb) Press 2 to show log on the server.\n"
-                displayMsg += "c) Press 3 initiate configuration change.\n"
-                choice = raw_input(displayMsg)
-                choice = int(choice)
+                query_1 = "\nWhat would you like to do?\n"
+                query_2 = "> A. Send money to a bank <args: [to where] [amount]>\n"
+                query_3 = "> B. Take a snapshot\n"
+                query_4 = "> C. Toggle connection\n"
+                query_5 = "> D. Shut down bank\n"
+                query = query_1 + query_2 + query_3 + query_4 + query_5 + "\n"
+                choice = raw_input(query)
+                choice = str(choice)
             except:
                 continue
 
-            if choice != 1 and choice != 2 and choice != 3:
-                print 'Invalid option! Please enter either 1 or 2.'
+            if choice != 'A' and choice != 'B' and choice != 'C' and choice != 'D':
+                print 'Invalid option! Please entier A, B, C, or D.'
                 continue
 
-            if choice == 1: 
-                noOfTickets = raw_input("Enter no. of tickets: ")
-                noOfTickets = int(noOfTickets)
-                if noOfTickets <= 0:
-                    print 'Invalid entry! Please enter a valid ticket count.'
+            if choice == 'A':
+                choice = choice.split()
+                amtMoney = int(choice[1])
+                if amtMoney <= 0:
+                    print 'Invalid entry! Please enter a valid money amount.'
                     continue
-            break
+
+        # '''Take request from user and request tickets from server''' 
+        # while True:
+        #     try:
+        #         displayMsg = "\nChoose an option:\na) Press 1 to buy tickets.\nb) Press 2 to show log on the server.\n"
+        #         displayMsg += "c) Press 3 initiate configuration change.\n"
+        #         choice = raw_input(displayMsg)
+        #         choice = int(choice)
+        #     except:
+        #         continue
+
+        #     if choice != 1 and choice != 2 and choice != 3:
+        #         print 'Invalid option! Please enter either 1 or 2.'
+        #         continue
+
+        #     if choice == 1: 
+        #         noOfTickets = raw_input("Enter no. of tickets: ")
+        #         noOfTickets = int(noOfTickets)
+        #         if noOfTickets <= 0:
+        #             print 'Invalid entry! Please enter a valid ticket count.'
+        #             continue
+        #     break
 
         
         if choice == 1:
@@ -261,6 +286,50 @@ class RaftClient():
             self.reqId += 1
             self.lastReq = CONFIGCHANGE
             self.sendConfigChangeCommand()
+
+# def prompt_user(my_port, sendingSockets):
+#     global current_money, num_snapshots, my_state, saved_states, in_snap, current_marker
+
+#     while True:
+#         query_1 = "\nWhat would you like to do?\n"
+#         query_2 = "> A. Send money to a bank <args: [to where] [amount]>\n"
+#         query_3 = "> B. Take a snapshot\n"
+#         query_4 = "> C. Toggle connection\n"
+#         query_5 = "> D. Shut down bank\n"
+#         query = query_1 + query_2 + query_3 + query_4 + query_5 + "\n"
+#         run_command = input(query)
+#         run_command = run_command.split()
+#         if run_command[0] == "A":
+#             where_to_send = int(run_command[1])
+#             amount_to_send = int(run_command[2])
+#             current_money -= amount_to_send
+#             print("<{}> sent {} dollars to <{}>. The current balance for <{}> is {}.".format(my_port, amount_to_send, str(where_to_send), my_port, current_money))
+#             send_money(str(amount_to_send), my_port, where_to_send, 0)
+#         elif run_command[0] == "B":
+#             in_snapshot = 1
+#             print("\nA snapshot has been initiated by <{}>.".format(my_port))
+            
+#             num_snapshots += 1
+#             # snapshot_leader = my_port
+#             marker_id = str(my_port) + "." + str(num_snapshots)
+#             my_state[marker_id] = current_money
+#             current_marker = marker_id
+#             marker_received[marker_id] = {}
+#             saved_states[marker_id] = []
+#             for port_id in FIFO_CHANNELS[my_port]:
+#                 marker_received[marker_id][port_id] = 0
+#                 send_marker(my_port, port_id, marker_id, my_port)
+#         elif run_command[0] == "C":
+#             CONNECTION_ONLINE = not CONNECTION_ONLINE
+#             print("Connection online:", CONNECTION_ONLINE)
+#         elif run_command[0] == "D":
+#             break
+#             for x, my_socket in sendingSockets.items():
+#                 my_socket.socket_object.shutdown(socket.SHUT_RDWR)
+#                 my_socket.socket_object.close()
+#             sys.exit()
+#         else:
+#             print("Invalid input. Try again.")
         
         
 client = RaftClient(clientId)
