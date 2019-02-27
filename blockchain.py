@@ -26,11 +26,11 @@ class Transaction(object):
 
 class Header(object):
 	'''txA and txB must be HASHED strings (SHA256).'''
-	def __init__(self, prevBlockHeader, txA, txB):
+	def __init__(self, currentTerm, prevBlockHeader, txA, txB):
 		'''
 		Current term represents the term being used in Raft.
 		'''
-		self.currentTerm = 0
+		self.currentTerm = currentTerm
 
 		'''
 		Hheader (B − 1) is the SHA256 hash of the header of the previous block, 
@@ -56,10 +56,16 @@ class Header(object):
 
 
 class Block(object):
-	def __init__(self, transactions, header, proposer):
-		self.transactions = transactions
+	def __init__(self, transactions, header):
+		self.transactions = transactions #list of two transaction
 		self.header = header
-		self.proposer = str(proposer)
+
+	# ! Untested function
+	def calcNonce(self):
+		self.header.nonce = 0
+		acceptDigit = ['0','1','2']
+		while hash(str(self.header.nonce)+self.header.ListofTxs)[-1:] not in acceptDigit:
+			self.header.nonce += 1
 
 	# Function below may not work due to class iterator (quick fix: use pointer in a method outside of this class)
 	# def printBlock(self):
@@ -81,15 +87,33 @@ class Chain(object):
 			line = configFile.readline()
 			while line:
 				line = line.strip('\n()')
-				print line
 				source, destination, amount = line.split(',')
 				transaction = Transaction(source, destination, int(amount))
 				transactionList.append(transaction)
 				line = configFile.readline()
 		return transactionList
 
-	def initBlockChain(self, inputTransactions):
-		print inputTransactions
+	'''
+	Initializes the blockchain with the input transactions from the config file.
+	'''
+	# ! Untested function
+	def initBlockChain(self, inputTransactionList):
+		txPair = []
+		header = None
+		for index, transaction in enumerate(inputTransactionList):
+			txPair.append(transaction)
+			if index%2 == 1: # if it is the 2nd transaction in the pair
+				if index == 1:
+					hashPrevHeader = None 
+				else:
+					hashPrevHeader = hash(header)
+				header = Header(0, hashPrevHeader, hash(txPair[0]), hash(txPair[1])) # ! Current term is set to 0 initially. Is this correct?
+				block = Block(txPair, header)
+				block.calcNonce()
+				self.chain.append(block)
+				txPair = []
+				hashPrevHeader = hash(header)
+				
 		# TODO: 
 		# 1) parse the file (file.readlines(), x = line.split(' '), x[0] = sender, x[1] = destination, x[2] = amount)
 		# 2) create the chain (using attributes above)
