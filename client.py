@@ -23,12 +23,9 @@ client_server_map =  {
     "cl1":"dc1",
     "cl2":"dc2",
     "cl3":"dc3",
-    # "cl4":"dc4",
-    # "cl5":"dc5"
 }
 
 class RaftClient():
-
     def __init__(self, clientId):
         self.leaderId = None
         self.reqId = 0
@@ -176,6 +173,7 @@ class RaftClient():
 
 
     def handleTimeout(self):
+        '''On timeout, choose a server that is not previous leader and send money request''' # ! TODO: change comment
         '''On timeout, choose a server that is not previous leader and send ticket request'''
         oldLeader = self.leaderId
         while True:
