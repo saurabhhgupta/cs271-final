@@ -3,6 +3,8 @@
 import hashlib
 import string
 
+CHAIN_INIT_FILE = "init_chain.txt"
+
 '''
 General hash function that returns a HASHED string
 '''
@@ -62,11 +64,12 @@ class Header(object):
 	'''
 	# ! UNTESTED FUNCTION
 	def stringify(self):
-		return "{},{},{},{}".format(self.currentTerm, self.hashPrevBlockHeader, self.hashListOfTxs, self.nonce)		
+		return "{},{},{},{}".format(self.currentTerm, self.hashPrevBlockHeader, self.hashListOfTxs, self.nonce)
+		# print "{},{},{},{}".format(self.currentTerm, self.hashPrevBlockHeader, self.hashListOfTxs, self.nonce)	
 
 class Block(object):
 	def __init__(self, transactions, header):
-		self.transactions = transactions # list of two transaction
+		self.transactions = transactions # list of two transactions
 		self.header = header
 
 	# ! UNTESTED FUNCTION
@@ -122,6 +125,6 @@ class Chain(object):
 		print self.chain
 
 blockchain = Chain()
-transactionList = blockchain.parseInitFile('test_config.txt') # ! Hardcoded file
+transactionList = blockchain.parseInitFile(CHAIN_INIT_FILE)
 blockchain.initBlockChain(transactionList)
 	
