@@ -19,6 +19,10 @@ class Transaction(object):
 		self.source = str(source)
 		self.destination = str(destination)
 
+	def stringify(self):
+		transaction = "{} {} {}".format(self.source, self.destination, self.amount)
+		return transaction
+
 	# Will most likely need a function to return the transaction itself.
 	def __repr__(self):
 		transaction = "{} {} {}".format(self.source, self.destination, self.amount)
@@ -54,17 +58,24 @@ class Header(object):
 		'''
 		self.nonce = None
 
+	'''
+	Stringify
+	'''
+	# ! UNTESTED FUNCTION
+	def stringify(self):
+		return "{},{},{},{}".format(self.currentTerm, self.hashPrevBlockHeader, self.hashListOfTxs, self.nonce)
+
 
 class Block(object):
 	def __init__(self, transactions, header):
 		self.transactions = transactions #list of two transaction
 		self.header = header
 
-	# ! Untested function
+	# ! UNTESTED FUNCTION
 	def calcNonce(self):
 		self.header.nonce = 0
 		acceptDigit = ['0','1','2']
-		while hash(str(self.header.nonce)+self.header.ListofTxs)[-1:] not in acceptDigit:
+		while hash(str(self.header.nonce)+self.header.hashListOfTxs)[-1:] not in acceptDigit:
 			self.header.nonce += 1
 
 	# Function below may not work due to class iterator (quick fix: use pointer in a method outside of this class)
@@ -96,15 +107,15 @@ class Chain(object):
 	'''
 	Initializes the blockchain with the input transactions from the config file.
 	'''
-	# ! Untested function
+	# ! UNTESTED FUNCTION
 	def initBlockChain(self, inputTransactionList):
 		txPair = []
 		header = None
 		for index, transaction in enumerate(inputTransactionList):
-			txPair.append(transaction)
+			txPair.append(transaction.stringify())
 			if index%2 == 1: # if it is the 2nd transaction in the pair
 				if index == 1:
-					hashPrevHeader = None 
+					hashPrevHeader = 'NULL' 
 				else:
 					hashPrevHeader = hash(header)
 				header = Header(0, hashPrevHeader, hash(txPair[0]), hash(txPair[1])) # ! Current term is set to 0 initially. Is this correct?
@@ -112,7 +123,7 @@ class Chain(object):
 				block.calcNonce()
 				self.chain.append(block)
 				txPair = []
-				hashPrevHeader = hash(header)
+				hashPrevHeader = hash(header.stringify())
 				
 		# TODO: 
 		# 1) parse the file (file.readlines(), x = line.split(' '), x[0] = sender, x[1] = destination, x[2] = amount)
