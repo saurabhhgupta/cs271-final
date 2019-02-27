@@ -23,7 +23,6 @@ class Transaction(object):
 		transaction = "{} {} {}".format(self.source, self.destination, self.amount)
 		return transaction
 
-	# Will most likely need a function to return the transaction itself.
 	def __repr__(self):
 		transaction = "{} {} {}".format(self.source, self.destination, self.amount)
 		return transaction
@@ -63,25 +62,19 @@ class Header(object):
 	'''
 	# ! UNTESTED FUNCTION
 	def stringify(self):
-		return "{},{},{},{}".format(self.currentTerm, self.hashPrevBlockHeader, self.hashListOfTxs, self.nonce)
-
+		return "{},{},{},{}".format(self.currentTerm, self.hashPrevBlockHeader, self.hashListOfTxs, self.nonce)		
 
 class Block(object):
 	def __init__(self, transactions, header):
-		self.transactions = transactions #list of two transaction
+		self.transactions = transactions # list of two transaction
 		self.header = header
 
 	# ! UNTESTED FUNCTION
 	def calcNonce(self):
 		self.header.nonce = 0
 		acceptDigit = ['0','1','2']
-		while hash(str(self.header.nonce)+self.header.hashListOfTxs)[-1:] not in acceptDigit:
+		while hash(str(self.header.nonce) + self.header.hashListOfTxs)[-1] not in acceptDigit:
 			self.header.nonce += 1
-
-	# Function below may not work due to class iterator (quick fix: use pointer in a method outside of this class)
-	# def printBlock(self):
-	# 	for transaction in self.transactions:
-	# 		print(str(transaction))
 
 
 class Chain(object):
@@ -97,11 +90,12 @@ class Chain(object):
 		with open(file, 'r') as configFile:
 			line = configFile.readline()
 			while line:
-				line = line.strip('\n()')
-				source, destination, amount = line.split(',')
+				# line = line.strip('\n')
+				source, destination, amount = line.split(' ')
 				transaction = Transaction(source, destination, int(amount))
 				transactionList.append(transaction)
 				line = configFile.readline()
+		print transactionList
 		return transactionList
 
 	'''
@@ -113,27 +107,21 @@ class Chain(object):
 		header = None
 		for index, transaction in enumerate(inputTransactionList):
 			txPair.append(transaction.stringify())
-			if index%2 == 1: # if it is the 2nd transaction in the pair
+			if index % 2 == 1: # if it is the 2nd transaction in the pair
 				if index == 1:
 					hashPrevHeader = 'NULL' 
 				else:
-					hashPrevHeader = hash(header)
-				header = Header(0, hashPrevHeader, hash(txPair[0]), hash(txPair[1])) # ! Current term is set to 0 initially. Is this correct?
+					hashPrevHeader = hash(header.stringify())
+				header = Header(0, hashPrevHeader, hash(txPair[0]), hash(txPair[1]))
 				block = Block(txPair, header)
 				block.calcNonce()
 				self.chain.append(block)
 				txPair = []
-				hashPrevHeader = hash(header.stringify())
-				
-		# TODO: 
-		# 1) parse the file (file.readlines(), x = line.split(' '), x[0] = sender, x[1] = destination, x[2] = amount)
-		# 2) create the chain (using attributes above)
-		# 3) append to self.chain
 
 	def printChain(self):
 		print self.chain
 
 blockchain = Chain()
-transactionList = blockchain.parseInitFile('test_config.txt')
+transactionList = blockchain.parseInitFile('test_config.txt') # ! Hardcoded file
 blockchain.initBlockChain(transactionList)
 	
