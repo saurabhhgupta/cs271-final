@@ -62,7 +62,7 @@ class RaftServer():
         self.votedFor = state['votedFor']
         self.followers = state['followers']
         self.commitIdx = state['commitIdx']
-        self.tickets = state['tickets']
+        # self.tickets = state['tickets']
         self.config = state['config']
         
 
@@ -126,7 +126,7 @@ class RaftServer():
             "votedFor": self.votedFor,
             "followers":self.followers,
             "commitIdx":self.commitIdx,
-            "tickets":self.tickets,
+            # "tickets":self.tickets,
             "config":self.config
         }
 
@@ -511,6 +511,15 @@ class RaftServer():
 
     ############################# Client request methods #############################
 
+    # ! TODO: Need to modify validRequest (see below) & add self.money attribute instead of tickets.
+    # Commented out so current program doesn't break.
+    #
+    # def validRequest(self, requestedAmount):
+    #     '''Check if there is enough money to serve the client's request'''
+    #     if requestedAmount <= self.money:
+    #         return True
+    #     return False
+
     def validRequest(self, requestedTickets):
         '''Chech if there enough tickets to serve the clients request'''
         if requestedTickets <= self.tickets:
@@ -526,6 +535,7 @@ class RaftServer():
             self.replyToClient(msg['reqId'], respMsg)
 
         else:
+            # ! TODO: need to modify below (replace tickets with money)
             if self.validRequest(msg['tickets']):
                 self.lastLogIdx += 1
                 self.lastLogTerm = self.term
@@ -537,6 +547,7 @@ class RaftServer():
                 self.sendAppendEntriesToAll()
                 self.writeLogEntriesToFile()
             else:
+                # ! TODO: need to modify below (replace tickets with money)
                 '''Client requested too many tickets; repond with appropriate message'''
                 response = 'Total tickets available: '+str(self.tickets)+'.'
                 response += ' Tickets requested should be less that total tickets available.'
@@ -560,12 +571,13 @@ class RaftServer():
         '''Actual fucntion that decrements no. of tickets in the pool.
         This fucntion is called only when majority of the followers have responded.'''
 
+        # ! TODO: need to replace tickets with money
         requestedTickets, reqId = self.getClientRequestFromLog(idx)
         if requestedTickets > 0:
             self.tickets -= requestedTickets
 
             if respondToClient:
-                response = 'Successfully purchased %s tickets.' %requestedTickets    
+                response = 'Successfully purchased %s tickets.' % requestedTickets    
                 respMsg = self.formClientResponseMsg(success=True, redirect=False, respMsg=response)
                 self.replyToClient(reqId, respMsg)
 

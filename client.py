@@ -12,6 +12,8 @@ clientId = sys.argv[1]
 BUFFER_SIZE = 2000 
 CLIRES= 'ClientResponse'
 SHOWRES= 'ShowResponse'
+# ! TODO: need to change TICKETREQ to MONEYREQ (or something)
+# MONEYREQ = 'MoneyRequest'
 TICKETREQ = 'TicketRequest'
 CONFIGCHANGE = 'ConfigChangeRequest'
 
@@ -31,10 +33,12 @@ class RaftClient():
         self.leaderId = None
         self.reqId = 0
         self.clientId = clientId
+        # ! TODO: change below
+        # self.money = 0
         self.tickets = 0
         self.lastReq = None
         self.readAndApplyConfig()
-        thread = Thread(target = self.requestTicketsFromUser)
+        thread = Thread(target = self.requestMoneyFromUser)
         thread.start()
         self.startListening()
 
@@ -52,7 +56,14 @@ class RaftClient():
         '''Get ip and port on which server is listening from config'''
         return self.config['dc_addresses'][dcId][0], self.config['dc_addresses'][dcId][1]
 
-
+    # ! TODO: function below should be changed to something like this
+    # def formRequestMsg(self, money):
+    #     msg = {
+    #         'ClientREquest': {
+    #             'reqId': self.clientId + ':' + str(self.reqId),
+    #             'money': money
+    #         }
+    #     }
     def formRequestMsg(self, tickets):
         msg = { 
         'ClientRequest': {
@@ -111,6 +122,8 @@ class RaftClient():
                 '''If its response for ticket request, cancel timer and handle the message accordingly'''
                 self.cancelTimer()
                 if msg['redirect'] == True:
+                    # ! TODO: change below
+                    # self.requestMoney()
                     self.requestTicket()
                 else:
                     if self.lastReq == CONFIGCHANGE:
@@ -118,17 +131,17 @@ class RaftClient():
                     if self.leaderId:
                         print '\nCurrent LEADER is %s.'%self.leaderId 
                     print msg['response']
-                    self.requestTicketsFromUser()
+                    self.requestMoneyFromUser()
 
             else:
                 print '\nCurrent LEADER is %s.'%self.leaderId 
                 print msg['response']
                 '''If its response of show, continue prompting user'''
-                self.requestTicketsFromUser()
+                self.requestMoneyFromUser()
 
 
     def sendRequest(self):
-        '''Form the request message and send a tcp request to server asking for tickets'''
+        '''Form the request message and send a tcp request to server asking for tickets''' # ! TODO: <--- MONEY, not asking for tickets
         if not self.leaderId:
             '''If leader is not known, randomly choose a server and request tickets'''
             randomIdx =  random.randint(0, len(self.config['datacenters'])-1)
@@ -171,12 +184,16 @@ class RaftClient():
             if dcId != oldLeader:
                 self.leaderId = dcId
                 break
+        # ! TODO: change below
+        # if self.lastReq == MONEYREQ:
         if self.lastReq == TICKETREQ:
             self.sendRequest()
         elif self.lastReq == CONFIGCHANGE:
             self.sendConfigChangeCommand()
 
-
+    # # ! TODO: change below
+    # def requestMoney(self):
+    #     self.sendRequest()
     def requestTicket(self):
         self.sendRequest()
 
@@ -225,59 +242,62 @@ class RaftClient():
             pass
 
 
-    def requestTicketsFromUser(self): 
-        '''Prompt user for options'''
-        while True:
-            try:
-                query_1 = "\nWhat would you like to do?\n"
-                query_2 = "> A. Send money to a bank <args: [to where] [amount]>\n"
-                query_3 = "> B. Take a snapshot\n"
-                query_4 = "> C. Toggle connection\n"
-                query_5 = "> D. Shut down bank\n"
-                query = query_1 + query_2 + query_3 + query_4 + query_5 + "\n"
-                choice = raw_input(query)
-                choice = str(choice)
-            except:
-                continue
-
-            if choice != 'A' and choice != 'B' and choice != 'C' and choice != 'D':
-                print 'Invalid option! Please entier A, B, C, or D.'
-                continue
-
-            if choice == 'A':
-                choice = choice.split()
-                amtMoney = int(choice[1])
-                if amtMoney <= 0:
-                    print 'Invalid entry! Please enter a valid money amount.'
-                    continue
-
-        # '''Take request from user and request tickets from server''' 
+    def requestMoneyFromUser(self): 
+        # ! TODO: the commented block below should be MODIFIED to fit the uncommented block underneath it
+        # '''Prompt user for options'''
         # while True:
         #     try:
-        #         displayMsg = "\nChoose an option:\na) Press 1 to buy tickets.\nb) Press 2 to show log on the server.\n"
-        #         displayMsg += "c) Press 3 initiate configuration change.\n"
-        #         choice = raw_input(displayMsg)
-        #         choice = int(choice)
+        #         query_1 = "\nWhat would you like to do?\n"
+        #         query_2 = "> A. Send money to a bank <args: [to where] [amount]>\n"
+        #         query_3 = "> B. Take a snapshot\n"
+        #         query_4 = "> C. Toggle connection\n"
+        #         query_5 = "> D. Shut down bank\n"
+        #         query = query_1 + query_2 + query_3 + query_4 + query_5 + "\n"
+        #         choice = raw_input(query)
+        #         choice = str(choice)
         #     except:
         #         continue
 
-        #     if choice != 1 and choice != 2 and choice != 3:
-        #         print 'Invalid option! Please enter either 1 or 2.'
+        #     if choice != 'A' and choice != 'B' and choice != 'C' and choice != 'D':
+        #         print 'Invalid option! Please entier A, B, C, or D.'
         #         continue
 
-        #     if choice == 1: 
-        #         noOfTickets = raw_input("Enter no. of tickets: ")
-        #         noOfTickets = int(noOfTickets)
-        #         if noOfTickets <= 0:
-        #             print 'Invalid entry! Please enter a valid ticket count.'
+        #     if choice == 'A':
+        #         choice = choice.split()
+        #         amtMoney = int(choice[1])
+        #         if amtMoney <= 0:
+        #             print 'Invalid entry! Please enter a valid money amount.'
         #             continue
-        #     break
+
+        '''Take request from user and request tickets from server''' 
+        while True:
+            try:
+                displayMsg = "\nChoose an option:\na) Press 1 to buy tickets.\nb) Press 2 to show log on the server.\n"
+                displayMsg += "c) Press 3 initiate configuration change.\n"
+                choice = raw_input(displayMsg)
+                choice = int(choice)
+            except:
+                continue
+
+            if choice != 1 and choice != 2 and choice != 3:
+                print 'Invalid option! Please enter either 1 or 2.'
+                continue
+
+            if choice == 1: 
+                noOfTickets = raw_input("Enter no. of tickets: ")
+                noOfTickets = int(noOfTickets)
+                if noOfTickets <= 0:
+                    print 'Invalid entry! Please enter a valid ticket count.'
+                    continue
+            break
 
         
         if choice == 1:
             self.tickets = noOfTickets
             '''Increment request id on each valid user request'''
             self.reqId += 1
+            # ! TODO: change below
+            # self.lastReq = MONEYREQ
             self.lastReq = TICKETREQ
             self.sendRequest()
         elif choice == 2:
