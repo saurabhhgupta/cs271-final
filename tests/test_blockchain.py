@@ -1,5 +1,5 @@
 import unittest
-from .. import blockchain
+from ..src import blockchain
 
 class TestBlockchain(unittest.TestCase):
     def test_init_chain(self):
