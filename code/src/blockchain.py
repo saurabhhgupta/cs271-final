@@ -98,7 +98,7 @@ class Chain(object):
 				transaction = Transaction(source, destination, int(amount))
 				transactionList.append(transaction)
 				line = configFile.readline()
-		print transactionList
+		# print transactionList
 		return transactionList
 
 	'''
@@ -123,8 +123,4 @@ class Chain(object):
 
 	def printChain(self):
 		print self.chain
-
-blockchain = Chain()
-transactionList = blockchain.parseInitFile(CHAIN_INIT_FILE)
-blockchain.initBlockChain(transactionList)
 	
