@@ -49,9 +49,9 @@ class RaftClient():
 
 
 
-    def getServerIpPort(self, dcId):
+    def getServerIpPort(self, serverId):
         '''Get ip and port on which server is listening from config'''
-        return self.config['dc_addresses'][dcId][0], self.config['dc_addresses'][dcId][1]
+        return self.config['dc_addresses'][serverId][0], self.config['dc_addresses'][serverId][1]
 
     # ! TODO: function below should be changed to something like this
     # def formRequestMsg(self, money):
@@ -142,11 +142,11 @@ class RaftClient():
         if not self.leaderId:
             '''If leader is not known, randomly choose a server and request tickets'''
             randomIdx =  random.randint(0, len(self.config['datacenters'])-1)
-            dcId = self.config['datacenters'][randomIdx]
+            serverId = self.config['datacenters'][randomIdx]
         else:
-            dcId = self.leaderId
+            serverId = self.leaderId
 
-        ip, port = self.getServerIpPort(dcId)
+        ip, port = self.getServerIpPort(serverId)
         reqMsg = self.formRequestMsg(self.tickets)
         reqMsg = json.dumps(reqMsg)
         try:
@@ -178,9 +178,9 @@ class RaftClient():
         oldLeader = self.leaderId
         while True:
             randomIdx =  random.randint(0, len(self.config['datacenters'])-1)
-            dcId = self.config['datacenters'][randomIdx]
-            if dcId != oldLeader:
-                self.leaderId = dcId
+            serverId = self.config['datacenters'][randomIdx]
+            if serverId != oldLeader:
+                self.leaderId = serverId
                 break
         # ! TODO: change below
         # if self.lastReq == MONEYREQ:
@@ -197,8 +197,8 @@ class RaftClient():
 
 
     def sendShowCommand(self):
-        dcId = client_server_map[clientId]
-        ip, port = self.getServerIpPort(dcId)
+        serverId = client_server_map[clientId]
+        ip, port = self.getServerIpPort(serverId)
         reqMsg = self.formShowCommandMsg()
         reqMsg = json.dumps(reqMsg)
         try:
@@ -218,11 +218,11 @@ class RaftClient():
         if not self.leaderId:
             '''If leader is not known, randomly choose a server and request tickets'''
             randomIdx =  random.randint(0, len(self.config['datacenters'])-1)
-            dcId = self.config['datacenters'][randomIdx]
+            serverId = self.config['datacenters'][randomIdx]
         else:
-            dcId = self.leaderId
+            serverId = self.leaderId
 
-        ip, port = self.getServerIpPort(dcId)
+        ip, port = self.getServerIpPort(serverId)
         reqMsg = self.formConfigChangeCmdMsg()
         reqMsg = json.dumps(reqMsg)
         try:
