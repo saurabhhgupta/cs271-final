@@ -1,11 +1,11 @@
 {
-	"state":"Follower",
-    "term":0,
-    "leaderId":null,
+	"state": "Follower",
+    "term": 0,
+    "leaderId": null,
     "votedFor": {},
-    "followers":{},
-    "commitIdx":-1,
-	"tickets":100,
+    "followers": {},
+    "commitIdx": -1,
+    "tickets": 100,
 	
 
 	"config":{
@@ -27,8 +27,8 @@
             "dc5": ["127.0.0.1", 5005]
         },
 
-        "election_timeout":[4,8],
-        "heartbeat_timeout":2,
+        "election_timeout": [4,8],
+        "heartbeat_timeout": 2,
         "client_request_timeout": 8
     }
 }
@@ -36,13 +36,13 @@
 
 
 {
-    "state":"Follower",
-    "term":0,
-    "leaderId":null,
+    "state": "Follower",
+    "term": 0,
+    "leaderId": null,
     "votedFor": {},
-    "followers":{},
-    "commitIdx":-1,
-    "tickets":100,
+    "followers": {},
+    "commitIdx": -1,
+    "tickets": 100,
     
 
     

@@ -3,7 +3,7 @@ import time
 
 class perpetualTimer():
    def __init__(self, t, hFunction):
-      self.t=t
+      self.t = t
       self.hFunction = hFunction
       self.thread = Timer(self.t, self.handle_function)
 
@@ -22,7 +22,7 @@ def printer():
     print 'ipsem lorem'
 
 startTime = time.time()
-t = perpetualTimer(5,printer)
+t = perpetualTimer(5, printer)
 t.start()
 time.sleep(7)
 t.cancel()

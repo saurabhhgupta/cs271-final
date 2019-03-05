@@ -27,8 +27,8 @@ NO = 'No'
 STATES = {1: 'FOLLOWER', 2: 'CANDIDATE', 3: 'LEADER'}
 
 class RaftServer():
-    def __init__(self, dcId):
-        self.dcId = dcId
+    def __init__(self, serverId):
+        self.serverId = serverId
         self.electionTimer = None
         self.heartbeatTimer = None
         self.voteCount = 0
@@ -53,7 +53,7 @@ class RaftServer():
 
 
     def initState(self):
-        with open(self.dcId + '_state.json') as state_file:    
+        with open(self.serverId + '_state.json') as state_file:    
             state = json.load(state_file)
 
         self.state = state['state']
@@ -62,23 +62,25 @@ class RaftServer():
         self.votedFor = state['votedFor']
         self.followers = state['followers']
         self.commitIdx = state['commitIdx']
-        # self.tickets = state['tickets']
+        self.money = state['money']
+        # self.money = state['money']
         self.config = state['config']
         
 
     def initLogEntries(self):
-        '''Initialize log realted variables from the .log file'''
+        '''Initialize log related variables from the .log file'''
         
-        with open(str(dcId) + '.log') as log_file:
-            reader = csv.reader(log_file, delimiter=',', quoting=csv.QUOTE_NONE)
-    
-            for entry in reader:
-                '''Convert idx, term and tickets to integers and append to logEntries variable'''
-                entry[0], entry[1], entry[2] = \
-                int(entry[0]), int(entry[1]), int(entry[2])
-                self.logEntries.append(entry)
-                '''Populate the mapping of requestId to its result from log'''
-                self.results[entry[3]] = entry[4]
+    	if os.path.isfile("saved_state_{}.txt".format(STATION_ID)):
+            with open(str(serverId) + '.log') as log_file:
+                reader = csv.reader(log_file, delimiter=',', quoting=csv.QUOTE_NONE)
+        
+                for entry in reader:
+                    '''Convert idx, term and money to integers and append to logEntries variable'''
+                    entry[0], entry[1], entry[2] = \
+                    int(entry[0]), int(entry[1]), int(entry[2])
+                    self.logEntries.append(entry)
+                    '''Populate the mapping of requestId to its result from log'''
+                    self.results[entry[3]] = entry[4]
 
         '''From lastLog, initialize lastLogIdx and lastLogTerm values'''
         lastLog = self.logEntries[-1] if self.logEntries else None
@@ -94,7 +96,7 @@ class RaftServer():
 
         self.election_timeout = self.config['election_timeout']
         self.heartbeat_timeout = self.config['heartbeat_timeout']
-        dcInfo= {'dc_name':self.dcId.upper()}
+        dcInfo= {'dc_name':self.serverId.upper()}
         self.logger = self.logFormatter(dcInfo)
         totalDcs = len(self.config['datacenters'])
         self.majority = totalDcs/2 + 1
@@ -113,7 +115,7 @@ class RaftServer():
 
 
     def writeLogEntriesToFile(self):
-        with open(self.dcId+".log", "w") as f:
+        with open(self.serverId+".log", "w") as f:
             writer = csv.writer(f, quoting=csv.QUOTE_NONE)
             writer.writerows(self.logEntries)
 
@@ -126,11 +128,11 @@ class RaftServer():
             "votedFor": self.votedFor,
             "followers":self.followers,
             "commitIdx":self.commitIdx,
-            # "tickets":self.tickets,
+            # "money":self.money,
             "config":self.config
         }
 
-        with open(self.dcId +'_state.json', 'w') as fp:
+        with open(self.serverId +'_state.json', 'w') as fp:
             json.dump(state, fp, indent=4)
         
 
@@ -139,7 +141,7 @@ class RaftServer():
     def formRequestVoteMsg(self):
         msg = { 
         'RequestVote': {
-            'candidateId': self.dcId,
+            'candidateId': self.serverId,
             'term': self.term,
             'lastLogIdx': self.lastLogIdx,
             'lastLogTerm': self.lastLogTerm
@@ -153,7 +155,7 @@ class RaftServer():
         'ResponseVote': {
             'term': self.term,
             'voteGranted': voteGranted,
-            'dcId':self.dcId
+            'serverId':self.serverId
             }
         }
         return msg
@@ -163,7 +165,7 @@ class RaftServer():
         msg = {
         'AppendEntries' : {
             'term': self.term,
-            'leaderId': self.dcId,
+            'leaderId': self.serverId,
             'prevLogIdx': self.logEntries[nextIdx-1][0] if nextIdx>0 else -1,
             'prevLogTerm': self.logEntries[nextIdx-1][1] if nextIdx>0 else 0,
             'entries': self.getLogEntries(nextIdx),
@@ -177,7 +179,7 @@ class RaftServer():
         msg = { 
         'ResponseEntries': {
             'term': self.term,
-            'followerId':self.dcId,
+            'followerId':self.serverId,
             'lastLogIdx':self.lastLogIdx,
             'success': success
             }
@@ -226,12 +228,12 @@ class RaftServer():
 
     def startElection(self):
         '''Start election only if not already a leader and current server is present in the config'''
-        if (not self.state == STATES[3]) and (self.dcId in self.config['datacenters']):
+        if (not self.state == STATES[3]) and (self.serverId in self.config['datacenters']):
             '''If not already a leader, change to candidate, increment term and req vote'''
             self.voteCount = 0
             self.state = STATES[2]
             self.term += 1
-            self.votedFor[self.term] = self.dcId
+            self.votedFor[self.term] = self.serverId
             self.voteCount += 1
             self.requestVote()
             self.writeStateToFile()
@@ -240,10 +242,10 @@ class RaftServer():
     def requestVote(self):
         reqMsg = self.formRequestVoteMsg()
         self.resetElectionTimer()
-        for dcId in self.config['datacenters']:
-            if dcId == self.dcId:
+        for serverId in self.config['datacenters']:
+            if serverId == self.serverId:
                 continue
-            ip, port = self.getServerIpPort(dcId)
+            ip, port = self.getServerIpPort(serverId)
             self.sendTcpMsg(ip, port, reqMsg)
 
 
@@ -256,7 +258,7 @@ class RaftServer():
             return
 
         if msg['term'] > self.term:
-            '''Update term if it is lesser than candidat'e term'''
+            '''Update term if it is lesser than candidate's term'''
             self.term = msg['term']
             self.convertToFollower()
 
@@ -299,7 +301,7 @@ class RaftServer():
     def convertToLeader(self):
         self.logger.debug('\nConverting to LEADER.\n')
         self.state = STATES[3]
-        self.leaderId = self.dcId
+        self.leaderId = self.serverId
         self.initFollowerDetails()
         self.sendAppendEntriesToAll()
         self.resetHeartbeatTimer()
@@ -318,14 +320,14 @@ class RaftServer():
 
     def sendAppendEntriesToAll(self):
         if self.state == STATES[3]:
-            for dcId in self.followers:
-                self.sendAppendEntriesMsg(dcId)
+            for serverId in self.followers:
+                self.sendAppendEntriesMsg(serverId)
             self.resetHeartbeatTimer()
 
 
-    def sendAppendEntriesMsg(self, dcId, display=True):
-        msg = self.formAppendEntriesMsg(self.followers[dcId])
-        ip, port = self.getServerIpPort(dcId)
+    def sendAppendEntriesMsg(self, serverId, display=True):
+        msg = self.formAppendEntriesMsg(self.followers[serverId])
+        ip, port = self.getServerIpPort(serverId)
         # if len(msg['AppendEntries']['entries']) == 0:
         display = False
         self.sendTcpMsg(ip, port, msg, display=display)
@@ -333,12 +335,12 @@ class RaftServer():
 
     def initFollowerDetails(self):
         '''Initialize next index for every follower once the server becomes leader'''
-        for dcId in self.config['datacenters']:
-            if dcId == self.dcId:
+        for serverId in self.config['datacenters']:
+            if serverId == self.serverId:
                 continue
-            if dcId not in self.followers:
+            if serverId not in self.followers:
                 '''Initialize nextIdx for each follower as leader's lastIdx+1.'''
-                self.followers[dcId] = self.lastLogIdx + 1
+                self.followers[serverId] = self.lastLogIdx + 1
 
 
     def handleResponseEntries(self, msg):
@@ -422,7 +424,7 @@ class RaftServer():
             respMsg = self.formClientResponseMsg(success=True, redirect=False, respMsg=response)
             self.replyToClient(reqId, respMsg)
 
-            if self.dcId not in self.config['datacenters']:
+            if self.serverId not in self.config['datacenters']:
                 self.sendAppendEntriesToAll()
                 time.sleep(2)
                 '''If current server is leader and it is not in new config, make it a follower'''
@@ -456,7 +458,7 @@ class RaftServer():
                     success = False
                 else:
                     '''Success case: Keep entries only till prevLogIdx, to that append the newly sent entries'''
-                    self.logEntries = self.logEntries[:msg['prevLogIdx']+1]
+                    self.logEntries = self.logEntries[:msg['prevLogIdx'] + 1]
                     self.logEntries.extend(msg['entries'])
                     if len(msg['entries']) > 0:
                         self.lastLogIdx = len(self.logEntries)-1
@@ -511,7 +513,7 @@ class RaftServer():
 
     ############################# Client request methods #############################
 
-    # ! TODO: Need to modify validRequest (see below) & add self.money attribute instead of tickets.
+    # ! TODO: Need to modify validRequest (see below) & add self.money attribute instead of money.
     # Commented out so current program doesn't break.
     #
     # def validRequest(self, requestedAmount):
@@ -520,9 +522,9 @@ class RaftServer():
     #         return True
     #     return False
 
-    def validRequest(self, requestedTickets):
-        '''Chech if there enough tickets to serve the clients request'''
-        if requestedTickets <= self.tickets:
+    def validRequest(self, requestedmoney):
+        '''Chech if there enough money to serve the clients request'''
+        if requestedmoney <= self.money:
             return True
         return False
 
@@ -530,16 +532,17 @@ class RaftServer():
     def handleClientRequest(self, recvMsg, msg):
         if not self.state == STATES[3]:
             '''This server is not leader; reply client with redirect message'''
-            response = 'Current leader is %s. Please redirect request to server %s' %(self.leaderId, self.leaderId)
+            response = 'Current leader is %s. Please redirect request to server %s' % (self.leaderId, self.leaderId)
             respMsg = self.formClientResponseMsg(success=False, redirect=True, respMsg=response)
             self.replyToClient(msg['reqId'], respMsg)
 
         else:
-            # ! TODO: need to modify below (replace tickets with money)
-            if self.validRequest(msg['tickets']):
+            # ! TODO: need to modify below (replace money with money)
+            if self.validRequest(msg['money']):
+                # ! Should be +=, not =+ like originally...
                 self.lastLogIdx += 1
                 self.lastLogTerm = self.term
-                entry = self.getNextLogEntry(msg['tickets'], msg['reqId'])
+                entry = self.getNextLogEntry(msg['money'], msg['reqId'])
                 self.logEntries.append(entry)
                 self.results[msg['reqId']] = NO
                 '''Initialize count for this index as 1 in replicatedIndexCount variable'''
@@ -547,10 +550,10 @@ class RaftServer():
                 self.sendAppendEntriesToAll()
                 self.writeLogEntriesToFile()
             else:
-                # ! TODO: need to modify below (replace tickets with money)
-                '''Client requested too many tickets; repond with appropriate message'''
-                response = 'Total tickets available: '+str(self.tickets)+'.'
-                response += ' Tickets requested should be less that total tickets available.'
+                # ! TODO: need to modify below (replace money with money)
+                '''Client requested too many money; repond with appropriate message'''
+                response = 'Total money available: ' + str(self.money) + '.'
+                response += ' money requested should be less that total money available.'
                 respMsg = self.formClientResponseMsg(success=False, redirect=False, respMsg=response)
                 self.replyToClient(msg['reqId'], respMsg)
 
@@ -568,23 +571,23 @@ class RaftServer():
 
 
     def executeClientRequest(self, idx, respondToClient=False):
-        '''Actual fucntion that decrements no. of tickets in the pool.
+        '''Actual fucntion that decrements no. of money in the pool.
         This fucntion is called only when majority of the followers have responded.'''
 
-        # ! TODO: need to replace tickets with money
-        requestedTickets, reqId = self.getClientRequestFromLog(idx)
-        if requestedTickets > 0:
-            self.tickets -= requestedTickets
+        # ! TODO: need to replace money with money
+        requestedmoney, reqId = self.getClientRequestFromLog(idx)
+        if requestedmoney > 0:
+            self.money -= requestedmoney
 
             if respondToClient:
-                response = 'Successfully purchased %s tickets.' % requestedTickets    
+                response = 'Successfully purchased %s money.' % requestedmoney    
                 respMsg = self.formClientResponseMsg(success=True, redirect=False, respMsg=response)
                 self.replyToClient(reqId, respMsg)
 
 
     def handleShowCommand(self, msg):
-        response = '\nThe current number of avaliable tickets are: %d\n' %(self.tickets)
-        response += 'Current log present on server %s is:\n' %(self.dcId)
+        response = '\nThe current number of avaliable money are: %d\n' %(self.money)
+        response += 'Current log present on server %s is:\n' %(self.serverId)
         
         for entry in self.logEntries:
             cmd = entry[2]
@@ -594,7 +597,7 @@ class RaftServer():
                 logResp = '[' + str(entry[0]) + ']: Config change (new).\n'
             else:
                 clientId = entry[3].split(':')[0]
-                logResp = '[' + str(entry[0]) + ']: Client %s bought %d tickets successfully.\n' %(clientId, cmd)
+                logResp = '[' + str(entry[0]) + ']: Client %s bought %d money successfully.\n' %(clientId, cmd)
 
             response += logResp
         respMsg = self.formShowResponseMsg(respMsg=response)
@@ -612,7 +615,7 @@ class RaftServer():
                 if msgType == CONFIGCHANGE:
                     response = 'Successfully changed configuration.'
                 else:
-                    response = 'Successfully purchased %s tickets.' %msg['tickets']
+                    response = 'Successfully purchased %s money.' %msg['money']
                 respMsg = self.formClientResponseMsg(success=True, redirect=False, respMsg=response)
                 self.replyToClient(reqId, respMsg)
             return True
@@ -654,9 +657,9 @@ class RaftServer():
 
         '''From the newly read config, update my current config such that it
         is old + new config'''
-        for dcId in self.newConfig['datacenters']:
-             if dcId not in self.config['datacenters']:
-                self.config['datacenters'].append(dcId)
+        for serverId in self.newConfig['datacenters']:
+             if serverId not in self.config['datacenters']:
+                self.config['datacenters'].append(serverId)
 
         if self.state == STATES[3]:
             '''If the server is current leader, it should add newly added followers to the 
@@ -713,9 +716,9 @@ class RaftServer():
         self.sendTcpMsg(ip, port, respMsg, display=display)
 
 
-    def getServerIpPort(self, dcId):
+    def getServerIpPort(self, serverId):
         '''Get ip and port on which server is listening from config'''
-        return self.config['dc_addresses'][dcId][0], self.config['dc_addresses'][dcId][1]
+        return self.config['dc_addresses'][serverId][0], self.config['dc_addresses'][serverId][1]
 
 
     def getClientIpPort(self, clId):
@@ -733,8 +736,7 @@ class RaftServer():
 
 
     # Multithreaded Python server : TCP Server Socket Thread Pool
-    class ConnectionThread(Thread): 
-     
+    class ConnectionThread(Thread):
         def __init__(self, conn, ip, port, raft): 
             Thread.__init__(self) 
             self.ip = ip
@@ -788,7 +790,7 @@ class RaftServer():
 
 
     def startServer(self):
-        ip, port = self.getServerIpPort(self.dcId)
+        ip, port = self.getServerIpPort(self.serverId)
 
         tcpServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         tcpServer.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
@@ -802,7 +804,7 @@ class RaftServer():
             newthread.start()
     
  
-dcId = sys.argv[1]
+serverId = sys.argv[1]
 delay = int(sys.argv[2])
 time.sleep(delay)
-raftSrvr = RaftServer(dcId)
+raftSrvr = RaftServer(serverId)

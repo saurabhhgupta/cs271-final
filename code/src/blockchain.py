@@ -2,6 +2,7 @@
 
 import hashlib
 import string
+import json
 
 CHAIN_INIT_FILE = "init_chain.txt"
 
@@ -59,6 +60,13 @@ class Header(object):
 		'''
 		self.nonce = None
 
+	def createHeaderJson(self):
+		header = {"currentTerm": self.currentTerm, 
+				"hashPrevBlockHeader": self.hashPrevBlockHeader,
+				"hashListOfTxs": self.hashListOfTxs,
+				"nonce": self.nonce}
+		return json.dumps(header)
+
 	'''
 	Stringify
 	'''
@@ -78,6 +86,12 @@ class Block(object):
 		acceptDigit = ['0','1','2']
 		while hash(str(self.header.nonce) + self.header.hashListOfTxs)[-1] not in acceptDigit:
 			self.header.nonce += 1
+	
+	def createBlockJson(self):
+		block = {"header": self.header,
+				"transactions": self.transactions}
+		return json.dumps(block)
+
 
 
 class Chain(object):
@@ -121,6 +135,13 @@ class Chain(object):
 				self.chain.append(block)
 				txPair = []
 
-	def printChain(self):
-		print self.chain
+	def printPrettyChain(self):
+		# print self.chain
+		pass
+	
+	def createChainJson(self):
+		return json.dumps({"block_{}".format(i): self.chain[i] for i in range(len(self.chain))})
+	
+	def printChainJson(self);
+		print self.createChainJson()
 	
