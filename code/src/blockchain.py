@@ -141,5 +141,5 @@ class Chain(object):
 		return json.dumps({"block_{}".format(i): self.chain[i] for i in range(len(self.chain))})
 	
 	def printChainJson(self):
-		print self.createChainJson()
+		print(self.createChainJson())
 	

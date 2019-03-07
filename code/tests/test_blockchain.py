@@ -2,7 +2,7 @@ import unittest
 import os
 import hashlib
 import json
-from code.src import blockchain
+from ..src import blockchain
 
 CHAIN_INIT_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "blockchain_test_init.txt")
 
@@ -55,14 +55,23 @@ class TestHeader(unittest.TestCase):
         self.assertEqual(json.dumps(correct_dict), self.header.createHeaderJson())
 
 class TestBlock(unittest.TestCase):
-    def test_block_header(self):
-        pass
+    def setUp(self):
+        self.currentTerm = 0
+        self.prevHeader = 'NULL'
+        self.hashPrevHeader = hashlib.sha256('NULL').hexdigest()
+        self.txA = 'A B 100'
+        self.txB = 'B C 50'
+        self.transaction_list = [self.txA, self.txB]
+        self.hashTxA = hashlib.sha256(self.txA).hexdigest()
+        self.hashTxB = hashlib.sha256(self.txB).hexdigest()
+        self.hashTxList = hashlib.sha256(self.hashTxA+self.hashTxB).hexdigest()
+        self.nonce = 2
+        self.header = blockchain.Header(self.currentTerm, self.prevHeader, self.hashTxA, self.hashTxB)
+        self.header.nonce = self.nonce
+        self.block = blockchain.Block(self.transaction_list, self.header)
 
-    def test_block_transactions(self):
-        pass
-
-    def test_mining(self):
-        pass
+    def test_block_creation(self):
+        self.block.transactions
 
     def test_createBlockJson(self):
         pass
