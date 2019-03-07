@@ -26,12 +26,12 @@ class TestHeader(unittest.TestCase):
     def setUp(self):
         self.currentTerm = 0
         self.prevHeader = 'NULL'
-        self.hashPrevHeader = hashlib.sha256('NULL').hexdigest()
+        self.hashPrevHeader = hashlib.sha256('NULL'.encode('utf-8')).hexdigest()
         self.txA = 'A B 100'
         self.txB = 'B C 50'
-        self.hashTxA = hashlib.sha256(self.txA).hexdigest()
-        self.hashTxB = hashlib.sha256(self.txB).hexdigest()
-        self.hashTxList = hashlib.sha256(self.hashTxA+self.hashTxB).hexdigest()
+        self.hashTxA = hashlib.sha256(self.txA.encode('utf-8')).hexdigest()
+        self.hashTxB = hashlib.sha256(self.txB.encode('utf-8')).hexdigest()
+        self.hashTxList = hashlib.sha256((self.hashTxA+self.hashTxB).encode('utf-8')).hexdigest()
         self.nonce = 2
         self.header = blockchain.Header(self.currentTerm, self.prevHeader, self.hashTxA, self.hashTxB)
 
@@ -58,23 +58,23 @@ class TestBlock(unittest.TestCase):
     def setUp(self):
         self.currentTerm = 0
         self.prevHeader = 'NULL'
-        self.hashPrevHeader = hashlib.sha256('NULL').hexdigest()
+        self.hashPrevHeader = hashlib.sha256('NULL'.encode('utf-8')).hexdigest()
         self.txA = 'A B 100'
         self.txB = 'B C 50'
         self.transaction_list = [self.txA, self.txB]
-        self.hashTxA = hashlib.sha256(self.txA).hexdigest()
-        self.hashTxB = hashlib.sha256(self.txB).hexdigest()
-        self.hashTxList = hashlib.sha256(self.hashTxA+self.hashTxB).hexdigest()
+        self.hashTxA = hashlib.sha256(self.txA.encode('utf-8')).hexdigest()
+        self.hashTxB = hashlib.sha256(self.txB.encode('utf-8')).hexdigest()
+        self.hashTxList = hashlib.sha256((self.hashTxA+self.hashTxB).encode('utf-8')).hexdigest()
         self.nonce = 2
         self.header = blockchain.Header(self.currentTerm, self.prevHeader, self.hashTxA, self.hashTxB)
         self.header.nonce = self.nonce
         self.block = blockchain.Block(self.transaction_list, self.header)
 
-    def test_block_creation(self):
-        self.block.transactions
+    # def test_block_creation(self):
+    #     self.block.transactions
 
-    def test_createBlockJson(self):
-        pass
+    # def test_createBlockJson(self):
+    #     pass
 
 class TestChain(unittest.TestCase):
     def setUp(self):
@@ -87,14 +87,19 @@ class TestChain(unittest.TestCase):
         for i, transaction in enumerate(output_transaction_list):
             self.assertEqual(correctTxList[i], transaction.stringify())
 
+    def test_printChainJson(self):
+        self.blockchain_chain = blockchain.Chain()
+        output_transaction_list = self.blockchain_chain.parseInitFile(CHAIN_INIT_FILE)
+        self.blockchain_chain.initBlockChain(output_transaction_list)
+        self.blockchain_chain.printChainJson()
+
     def test_init_blockchain(self):
         self.blockchain_chain = blockchain.Chain()
         output_transaction_list = self.blockchain_chain.parseInitFile(CHAIN_INIT_FILE)
         self.blockchain_chain.initBlockChain(output_transaction_list)
         # ! INCOMPLETE
 
-    def test_printChainJson(self):
-        pass
+    
 
 if __name__ == "__main__":
     unittest.main()

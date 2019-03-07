@@ -10,7 +10,7 @@ CHAIN_INIT_FILE = "init_chain.txt"
 General hash function that returns a HASHED string
 '''
 def hash(data):
-	return hashlib.sha256(data).hexdigest()
+	return hashlib.sha256(data.encode('utf-8')).hexdigest()
 
 '''
 txA and txB are two transactions where each transaction is a string in the format: ”A B amount” 
@@ -86,7 +86,7 @@ class Block(object):
 		self.header = header
 	
 	def createBlockJson(self):
-		block = {"header": self.header,
+		block = {"header": self.header.createHeaderJson(),
 				"transactions": self.transactions}
 		return json.dumps(block)
 
@@ -133,13 +133,19 @@ class Chain(object):
 				self.chain.append(block)
 				txPair = []
 
+	# ! TODO: print block like structures in terminal as a visual "blockchain"
 	def printPrettyChain(self):
 		# print self.chain
 		pass
 	
 	def createChainJson(self):
-		return json.dumps({"block_{}".format(i): self.chain[i] for i in range(len(self.chain))})
+		return json.dumps({"block_{}".format(i): self.chain[i].createBlockJson() for i in range(len(self.chain))})
 	
 	def printChainJson(self):
 		print(self.createChainJson())
-	
+
+if __name__ == "__main__":
+	bc = Chain()
+	output = bc.parseInitFile(CHAIN_INIT_FILE)
+	bc.initBlockChain(output)
+	bc.printChainJson()
