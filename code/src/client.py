@@ -12,9 +12,7 @@ clientId = sys.argv[1]
 BUFFER_SIZE = 2000 
 CLIRES= 'ClientResponse'
 SHOWRES= 'ShowResponse'
-# ! TODO: need to change TICKETREQ to MONEYREQ (or something)
-# MONEYREQ = 'MoneyRequest'
-TICKETREQ = 'TicketRequest'
+MONEYREQ = 'MONEYREQuest'
 CONFIGCHANGE = 'ConfigChangeRequest'
 
 CONFIGFILE = 'config.json'
@@ -30,9 +28,7 @@ class RaftClient():
         self.leaderId = None
         self.reqId = 0
         self.clientId = clientId
-        # ! TODO: change below
-        # self.money = 0
-        self.tickets = 0
+        self.money = 0
         self.lastReq = None
         self.readAndApplyConfig()
         thread = Thread(target = self.requestMoneyFromUser)
@@ -53,19 +49,11 @@ class RaftClient():
         '''Get ip and port on which server is listening from config'''
         return self.config['dc_addresses'][serverId][0], self.config['dc_addresses'][serverId][1]
 
-    # ! TODO: function below should be changed to something like this
-    # def formRequestMsg(self, money):
-    #     msg = {
-    #         'ClientREquest': {
-    #             'reqId': self.clientId + ':' + str(self.reqId),
-    #             'money': money
-    #         }
-    #     }
-    def formRequestMsg(self, tickets):
+    def formRequestMsg(self, money):
         msg = { 
         'ClientRequest': {
             'reqId': self.clientId + ':' + str(self.reqId),
-            'tickets': tickets
+            'money': money
             }
         }
         return msg
@@ -116,12 +104,10 @@ class RaftClient():
             self.leaderId = msg['leaderId']
 
             if msgType == CLIRES:
-                '''If its response for ticket request, cancel timer and handle the message accordingly'''
+                '''If its response for money request, cancel timer and handle the message accordingly'''
                 self.cancelTimer()
                 if msg['redirect'] == True:
-                    # ! TODO: change below
-                    # self.requestMoney()
-                    self.requestTicket()
+                    self.requestMoney()
                 else:
                     if self.lastReq == CONFIGCHANGE:
                         self.readAndApplyConfig()
@@ -138,16 +124,15 @@ class RaftClient():
 
 
     def sendRequest(self):
-        '''Form the request message and send a tcp request to server asking for tickets''' # ! TODO: <--- MONEY, not asking for tickets
         if not self.leaderId:
-            '''If leader is not known, randomly choose a server and request tickets'''
+            '''If leader is not known, randomly choose a server and request money'''
             randomIdx =  random.randint(0, len(self.config['datacenters'])-1)
             serverId = self.config['datacenters'][randomIdx]
         else:
             serverId = self.leaderId
 
         ip, port = self.getServerIpPort(serverId)
-        reqMsg = self.formRequestMsg(self.tickets)
+        reqMsg = self.formRequestMsg(self.money)
         reqMsg = json.dumps(reqMsg)
         try:
             tcpClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -173,8 +158,7 @@ class RaftClient():
 
 
     def handleTimeout(self):
-        '''On timeout, choose a server that is not previous leader and send money request''' # ! TODO: change comment
-        '''On timeout, choose a server that is not previous leader and send ticket request'''
+        '''On timeout, choose a server that is not previous leader and send money request'''
         oldLeader = self.leaderId
         while True:
             randomIdx =  random.randint(0, len(self.config['datacenters'])-1)
@@ -182,17 +166,12 @@ class RaftClient():
             if serverId != oldLeader:
                 self.leaderId = serverId
                 break
-        # ! TODO: change below
-        # if self.lastReq == MONEYREQ:
-        if self.lastReq == TICKETREQ:
+        if self.lastReq == MONEYREQ:
             self.sendRequest()
         elif self.lastReq == CONFIGCHANGE:
             self.sendConfigChangeCommand()
 
-    # # ! TODO: change below
-    # def requestMoney(self):
-    #     self.sendRequest()
-    def requestTicket(self):
+    def requestMoney(self):
         self.sendRequest()
 
 
@@ -216,7 +195,7 @@ class RaftClient():
 
     def sendConfigChangeCommand(self):
         if not self.leaderId:
-            '''If leader is not known, randomly choose a server and request tickets'''
+            '''If leader is not known, randomly choose a server and request money'''
             randomIdx =  random.randint(0, len(self.config['datacenters'])-1)
             serverId = self.config['datacenters'][randomIdx]
         else:
@@ -267,10 +246,10 @@ class RaftClient():
         #             print 'Invalid entry! Please enter a valid money amount.'
         #             continue
 
-        '''Take request from user and request tickets from server''' 
+        '''Take request from user and request money from server''' 
         while True:
             try:
-                displayMsg = "\nChoose an option:\na) Press 1 to buy tickets.\nb) Press 2 to show log on the server.\n"
+                displayMsg = "\nChoose an option:\na) Press 1 to buy money.\nb) Press 2 to show log on the server.\n"
                 displayMsg += "c) Press 3 initiate configuration change.\n"
                 choice = raw_input(displayMsg)
                 choice = int(choice)
@@ -282,21 +261,19 @@ class RaftClient():
                 continue
 
             if choice == 1: 
-                noOfTickets = raw_input("Enter no. of tickets: ")
-                noOfTickets = int(noOfTickets)
-                if noOfTickets <= 0:
-                    print 'Invalid entry! Please enter a valid ticket count.'
+                amtOfMoney = raw_input("Enter no. of money: ")
+                amtOfMoney = int(amtOfMoney)
+                if amtOfMoney <= 0:
+                    print 'Invalid entry! Please enter a valid money count.'
                     continue
             break
 
         
         if choice == 1:
-            self.tickets = noOfTickets
+            self.money = amtOfMoney
             '''Increment request id on each valid user request'''
             self.reqId += 1
-            # ! TODO: change below
-            # self.lastReq = MONEYREQ
-            self.lastReq = TICKETREQ
+            self.lastReq = MONEYREQ
             self.sendRequest()
         elif choice == 2:
             self.sendShowCommand()

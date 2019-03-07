@@ -51,7 +51,6 @@ class RaftServer():
         self.applyConfig()
         self.initLogEntries()
 
-
     def initState(self):
         with open(self.serverId + '_state.json') as state_file:    
             state = json.load(state_file)
@@ -513,15 +512,6 @@ class RaftServer():
 
     ############################# Client request methods #############################
 
-    # ! TODO: Need to modify validRequest (see below) & add self.money attribute instead of money.
-    # Commented out so current program doesn't break.
-    #
-    # def validRequest(self, requestedAmount):
-    #     '''Check if there is enough money to serve the client's request'''
-    #     if requestedAmount <= self.money:
-    #         return True
-    #     return False
-
     def validRequest(self, requestedmoney):
         '''Chech if there enough money to serve the clients request'''
         if requestedmoney <= self.money:
@@ -537,9 +527,8 @@ class RaftServer():
             self.replyToClient(msg['reqId'], respMsg)
 
         else:
-            # ! TODO: need to modify below (replace money with money)
             if self.validRequest(msg['money']):
-                # ! Should be +=, not =+ like originally...
+                # ! Line below should be +=, not =+ like originally...
                 self.lastLogIdx += 1
                 self.lastLogTerm = self.term
                 entry = self.getNextLogEntry(msg['money'], msg['reqId'])
@@ -550,7 +539,6 @@ class RaftServer():
                 self.sendAppendEntriesToAll()
                 self.writeLogEntriesToFile()
             else:
-                # ! TODO: need to modify below (replace money with money)
                 '''Client requested too many money; repond with appropriate message'''
                 response = 'Total money available: ' + str(self.money) + '.'
                 response += ' money requested should be less that total money available.'
@@ -574,7 +562,6 @@ class RaftServer():
         '''Actual fucntion that decrements no. of money in the pool.
         This fucntion is called only when majority of the followers have responded.'''
 
-        # ! TODO: need to replace money with money
         requestedmoney, reqId = self.getClientRequestFromLog(idx)
         if requestedmoney > 0:
             self.money -= requestedmoney
