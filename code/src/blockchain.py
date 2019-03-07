@@ -32,7 +32,7 @@ class Transaction(object):
 
 class Header(object):
 	'''txA and txB must be HASHED strings (SHA256).'''
-	def __init__(self, currentTerm, prevBlockHeader, txA, txB):
+	def __init__(self, currentTerm, prevBlockHeader, hashTxA, hashTxB):
 		'''
 		Current term represents the term being used in Raft.
 		'''
@@ -48,7 +48,7 @@ class Header(object):
 		HlistOfTxs(B) uses the Merkel Tree data structure, 
 		which is a SHA256 hash of the concatenation of two SHA256 hashes of two transactions.
 		'''
-		self.hashListOfTxs = hash(txA + txB)
+		self.hashListOfTxs = hash(hashTxA + hashTxB)
 
 		'''
 		The nonce is a random string such that: Taking the SHA256 of the concatenation of HListOfTxs(H(X)||H(Y)) of the current block 
@@ -60,6 +60,12 @@ class Header(object):
 		'''
 		self.nonce = None
 
+	def calcNonce(self):
+		self.nonce = 0
+		acceptDigit = ['0','1','2']
+		while hash(str(self.nonce) + self.hashListOfTxs)[-1] not in acceptDigit:
+			self.nonce += 1
+
 	def createHeaderJson(self):
 		header = {"currentTerm": self.currentTerm, 
 				"hashPrevBlockHeader": self.hashPrevBlockHeader,
@@ -70,7 +76,6 @@ class Header(object):
 	'''
 	Stringify
 	'''
-	# ! UNTESTED FUNCTION
 	def stringify(self):
 		return "{},{},{},{}".format(self.currentTerm, self.hashPrevBlockHeader, self.hashListOfTxs, self.nonce)
 		# print "{},{},{},{}".format(self.currentTerm, self.hashPrevBlockHeader, self.hashListOfTxs, self.nonce)	
@@ -79,13 +84,6 @@ class Block(object):
 	def __init__(self, transactions, header):
 		self.transactions = transactions # list of two transactions
 		self.header = header
-
-	# ! UNTESTED FUNCTION
-	def calcNonce(self):
-		self.header.nonce = 0
-		acceptDigit = ['0','1','2']
-		while hash(str(self.header.nonce) + self.header.hashListOfTxs)[-1] not in acceptDigit:
-			self.header.nonce += 1
 	
 	def createBlockJson(self):
 		block = {"header": self.header,
@@ -131,7 +129,7 @@ class Chain(object):
 					hashPrevHeader = hash(header.stringify())
 				header = Header(0, hashPrevHeader, hash(txPair[0]), hash(txPair[1]))
 				block = Block(txPair, header)
-				block.calcNonce()
+				block.header.calcNonce()
 				self.chain.append(block)
 				txPair = []
 
