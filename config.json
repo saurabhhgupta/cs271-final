@@ -1,0 +1,11 @@
+{
+	"TCP_IP": ["127.0.0.1"],
+	"NETWORK_MAP": {"1": 5001,
+					"2": 5002,
+					"3": 5003
+					},
+	"BALANCE": [100],
+	"FOLLOWER": 0,
+	"CANDIDATE": 1,
+	"LEADER": 2
+}
