@@ -30,42 +30,57 @@ MAJORITY = 2
 SOCKET_LISTEN_BOUND = 10
 ########## End configuration setup ##########
 
-def main():
-	global current_port
+def threaded(sending_sockets):
 	global current_money
-	global current_status
-	threads_recv = []
+	global current_port
+	global current_leader
+	global halt_process
+	global heartbeat
+	global current_term
 
-	current_port = int(sys.argv[1])
-	print("current port: ", current_port)
-	current_status = FOLLOWER
-	port_list = CHANNELS[current_port]
-	print("list of ports: ", port_list)
-	current_money = BALANCE[current_port]
-	print("port balance: ", current_money)
-
-	socket_recv = Socket(TCP_IP, current_port).create_recv_socket()
-	for port in port_list:
-		objects_socket_send[port] = Socket(TCP_IP, port).create_send_socket()
-
-	while len(objects_socket_recv) != len(port_list):
-		objects_socket_recv.append(socket_recv.toggle_connect())
-
-	for object in objects_socket_recv:
-		threads_recv.append(Thread(read_socket, (object,)).create_thread())
-
-	time.sleep(random.randint(0, 2500)/1000)
-	thread_heartbeat = Thread(leader_alive, ()).create_thread()
-	thread_queue = Thread(process, (current_port, )).create_thread()
-	thread_task = Thread(threaded, (objects_socket_send,)).create_thread()
-	thread_task.join_thread()
-	thread_queue.join_thread()
-	thread_heartbeat.join_thread()
-
-	for thread in threads_recv:
-		thread.join_thread()
-
-	sys.exit()
+	while(True):
+		query_1 = "\nWhat would you like to do?\n"
+		query_2 = "> A. Send money to a bank <args: (to where) (amount)>\n"
+		query_3 = "> B. Print balance\n"
+		query_4 = "> C. Print blockchain\n"
+		query_5 = "> D. Turn off server\n"
+		query_6 = "> E. Turn on server\n"
+		query_7 = "> F. Show status\n"
+		query_7 = "> G. Toggle connection\n"
+		query_8 = "> H. Shut down bank\n"
+		query = query_1 + query_2 + query_3 + query_4 + query_5 + query_6 + query_7 + query_8 + "\n"
+		user_input = input(query)
+		user_input = user_input.split()
+		if user_input[0] == "A":
+			where_to_send = int(user_input[1])
+			amount_to_send = int(user_input[2])
+			if amount_to_send > get_balance():
+				print("Not enough money in [{}]. Balance = ${}".format(current_port, get_balance()))
+			else:
+				if current_port != current_leader:
+					send_money("{} {} {}".format(str(current_port), str(where_to_send), str(amount_to_send)), current_port, current_leader)
+				else:
+					# current server is leader
+					queue_transactions.put("{} {} {}".format(str(current_port), str(where_to_send), str(amount_to_send)))
+				print("[{}] sent ${} to [{}].".format(current_port, amount_to_send, str(where_to_send)))
+		elif user_input[0] == "B":
+			print("Balance = ${}".format(get_balance()))
+		elif user_input[0] == "C":
+			print("fuck me")
+		elif user_input[0] == "D":
+			halt_process = 1
+		elif user_input[0] == "F":
+			pass
+		elif user_input[0] == "E":
+			halt_process = 0
+		elif user_input[0] == "G":
+			CONNECTION_ONLINE = not CONNECTION_ONLINE
+			print("Connection online:", CONNECTION_ONLINE)
+		elif user_input[0] == "H":
+			break
+			sys.exit()
+		else:
+			print("\nuser_input not recognized. Try again (A-H).\n")
 
 class Thread(object):
 	thread_dest = None
@@ -341,58 +356,6 @@ def get_balance():
 	# ! if receiver == current_port then increment the amt
 	return starting_balance
 
-def threaded(sending_sockets):
-	global current_money
-	global current_port
-	global current_leader
-	global halt_process
-	global heartbeat
-	global current_term
-
-	while(True):
-		query_1 = "\nWhat would you like to do?\n"
-		query_2 = "> A. Send money to a bank <args: (to where) (amount)>\n"
-		query_3 = "> B. Print balance\n"
-		query_4 = "> C. Print blockchain\n"
-		query_5 = "> D. Turn off server\n"
-		query_6 = "> E. Turn on server\n"
-		query_7 = "> F. Show status\n"
-		query_7 = "> G. Toggle connection\n"
-		query_8 = "> H. Shut down bank\n"
-		query = query_1 + query_2 + query_3 + query_4 + query_5 + query_6 + query_7 + query_8 + "\n"
-		user_input = input(query)
-		user_input = user_input.split()
-		if user_input[0] == "A":
-			where_to_send = int(user_input[1])
-			amount_to_send = int(user_input[2])
-			if amount_to_send > get_balance():
-				print("Not enough money in [{}]. Balance = ${}".format(current_port, get_balance()))
-			else:
-				if current_port != current_leader:
-					send_money("{} {} {}".format(str(current_port), str(where_to_send), str(amount_to_send)), current_port, current_leader)
-				else:
-					# current server is leader
-					queue_transactions.put("{} {} {}".format(str(current_port), str(where_to_send), str(amount_to_send)))
-				print("[{}] sent ${} to [{}].".format(current_port, amount_to_send, str(where_to_send)))
-		elif user_input[0] == "B":
-			print("Balance = ${}".format(get_balance()))
-		elif user_input[0] == "C":
-			print("fuck me")
-		elif user_input[0] == "D":
-			halt_process = 1
-		elif user_input[0] == "F":
-			pass
-		elif user_input[0] == "E":
-			halt_process = 0
-		elif user_input[0] == "G":
-			CONNECTION_ONLINE = not CONNECTION_ONLINE
-			print("Connection online:", CONNECTION_ONLINE)
-		elif user_input[0] == "H":
-			break
-			sys.exit()
-		else:
-			print("\nuser_input not recognized. Try again (A-H).\n")
-
 def send_heartbeat(current_port):
 	global current_term
 	global next_index
@@ -431,6 +394,43 @@ def send_request_vote(current_port, current_term):
 		else:
 			send_message = RequestVoteRPC(current_port, current_term, len(log), log[-1].current_term).pack()
 		socket.send_to_socket(send_message)
+
+def main():
+	global current_port
+	global current_money
+	global current_status
+	threads_recv = []
+
+	current_port = int(sys.argv[1])
+	print("current port: ", current_port)
+	current_status = FOLLOWER
+	port_list = CHANNELS[current_port]
+	print("list of ports: ", port_list)
+	current_money = BALANCE[current_port]
+	print("port balance: ", current_money)
+
+	socket_recv = Socket(TCP_IP, current_port).create_recv_socket()
+	for port in port_list:
+		objects_socket_send[port] = Socket(TCP_IP, port).create_send_socket()
+
+	while len(objects_socket_recv) != len(port_list):
+		objects_socket_recv.append(socket_recv.toggle_connect())
+
+	for object in objects_socket_recv:
+		threads_recv.append(Thread(read_socket, (object,)).create_thread())
+
+	time.sleep(random.randint(0, 2500)/1000)
+	thread_heartbeat = Thread(leader_alive, ()).create_thread()
+	thread_queue = Thread(process, (current_port, )).create_thread()
+	thread_task = Thread(threaded, (objects_socket_send,)).create_thread()
+	thread_task.join_thread()
+	thread_queue.join_thread()
+	thread_heartbeat.join_thread()
+
+	for thread in threads_recv:
+		thread.join_thread()
+
+	sys.exit()
 
 if __name__ == "__main__":
 	main()
