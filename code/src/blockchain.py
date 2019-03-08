@@ -30,6 +30,18 @@ class Transaction(object):
 		transaction = "{} {} {}".format(self.source, self.destination, self.amount)
 		return transaction
 
+	def __eq__(self, other):
+		if self is other:
+			return True
+		else:
+			if self.source != other.source:
+				return False
+			if self.destination != other.destination:
+				return False
+			if self.amount != other.amount:
+				return False
+			return True
+
 class Header(object):
 	'''txA and txB must be HASHED strings (SHA256).'''
 	def __init__(self, current_term, prev_block_header, hash_tx_a, hash_tx_b):
@@ -62,8 +74,8 @@ class Header(object):
 
 	def calc_nonce(self):
 		self.nonce = 0
-		acceptDigit = ['0','1','2']
-		while hash(str(self.nonce) + self.hash_list_of_txs)[-1] not in acceptDigit:
+		accept_digit = ['0','1','2']
+		while hash(str(self.nonce) + self.hash_list_of_txs)[-1] not in accept_digit:
 			self.nonce += 1
 
 	def create_header_json(self):
@@ -80,6 +92,20 @@ class Header(object):
 		return "{},{},{},{}".format(self.current_term, self.hash_prev_block_header, self.hash_list_of_txs, self.nonce)
 		# print "{},{},{},{}".format(self.current_term, self.hash_prev_block_header, self.hash_list_of_txs, self.nonce)	
 
+	def __eq__(self, other):
+		if self is other:
+			return True
+		else:
+			if self.current_term != other.current_term:
+				return False
+			if self.hash_prev_block_header != other.hash_prev_block_header:
+				return False
+			if self.hash_list_of_txs != other.hash_list_of_txs:
+				return False
+			if self.nonce != other.nonce:
+				return False
+			return True
+
 class Block(object):
 	def __init__(self, transactions, header):
 		self.transactions = transactions # list of two transactions
@@ -90,7 +116,17 @@ class Block(object):
 				"transactions": self.transactions}
 		return json.dumps(block)
 
-
+	def __eq__(self, other):
+		if self is other:
+			return True
+		else:
+			if self.transactions[0] != other.transactions[0]:
+				return False
+			if self.transactions[1] != other.transactions[1]:
+				return False
+			if self.header != other.header:
+				return False
+			return True
 
 class Chain(object):
 	def __init__(self):
@@ -143,11 +179,6 @@ class Chain(object):
 	
 	def print_chain_json(self):
 		print(self.create_chain_json())
-
-	# ! TODO: Compare chains. Return if valid leader? or Return if updated follower?
-	def chain_compare(self):
-		pass
-
 
 if __name__ == "__main__":
 	bc = Chain()
