@@ -158,15 +158,16 @@ class Chain(object):
 		for index, transaction in enumerate(input_transaction_list):
 			tx_pair.append(transaction.stringify())
 			if index % 2 == 1: # if it is the 2nd transaction in the pair
-				if index == 1:
-					hash_prev_header = 'NULL' 
-				else:
-					hash_prev_header = hash(header.stringify())
-				header = Header(0, hash_prev_header, hash(tx_pair[0]), hash(tx_pair[1]))
-				block = Block(tx_pair, header)
-				block.header.calc_nonce()
-				self.chain.append(block)
-				tx_pair = []
+				# if index == 1:
+				# 	hash_prev_header = 'NULL' 
+				# else:
+				# 	hash_prev_header = hash(header.stringify())
+				# header = Header(0, hash_prev_header, hash(tx_pair[0]), hash(tx_pair[1]))
+				# block = Block(tx_pair, header)
+				# block.header.calc_nonce()
+				# self.chain.append(block)
+				# tx_pair = []
+				self.add_block(0, tx_pair)
 
 	# ! TODO: print block like structures in terminal as a visual "blockchain"
 	def print_pretty_chain(self):
@@ -179,6 +180,16 @@ class Chain(object):
 	
 	def print_chain_json(self):
 		print(self.create_chain_json())
+
+	def add_block(self, current_term, TxList):
+		if len(self.chain) == 0:
+			hash_prev_header = 'NULL'
+		else:
+			hash_prev_header = hash(self.chain[-1].header.stringify())
+		new_header = Header(current_term, hash_prev_header, hash(TxList[0]), hash(TxList[1]))
+		new_header.calc_nonce()
+		new_block = Block(TxList, new_header)
+		self.chain.append(new_block)
 
 if __name__ == "__main__":
 	bc = Chain()

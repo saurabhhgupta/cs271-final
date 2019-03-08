@@ -36,23 +36,23 @@ class TestHeader(unittest.TestCase):
         self.header = blockchain.Header(self.currentTerm, self.prevHeader, self.hashTxA, self.hashTxB)
 
     def test_nonce_mining(self):
-        self.header.calcNonce()
+        self.header.calc_nonce()
         self.assertEqual(self.nonce, self.header.nonce)
 
     def test_header_init_and_stringify(self):
         correct_header_stringify = '{},{},{},{}'.format(0, self.hashPrevHeader, self.hashTxList, self.nonce)
-        self.header.calcNonce()
+        self.header.calc_nonce()
         output_stringify = self.header.stringify()
         self.assertEqual(correct_header_stringify, output_stringify)
 
     # this was the stupidest unittest ever
     def test_createHeaderJson(self):
-        correct_dict =  {'currentTerm': self.currentTerm, 
-                        'hashPrevBlockHeader': self.hashPrevHeader,
-                        'hashListOfTxs': self.hashTxList,
+        correct_dict =  {'current_term': self.currentTerm, 
+                        'hash_prev_block_header': self.hashPrevHeader,
+                        'hash_list_of_txs': self.hashTxList,
                         'nonce': self.nonce}
-        self.header.calcNonce()
-        self.assertEqual(json.dumps(correct_dict), self.header.createHeaderJson())
+        self.header.calc_nonce()
+        self.assertEqual(json.dumps(correct_dict), self.header.create_header_json())
 
 class TestBlock(unittest.TestCase):
     def setUp(self):
@@ -83,20 +83,20 @@ class TestChain(unittest.TestCase):
     def test_parse_init_file(self):
         correctTxList = ['A B 5', 'B C 5', 'A C 10', 'C B 10', 'B A 15', 'C A 15', 'A B 20']
         self.blockchain_chain = blockchain.Chain()
-        output_transaction_list = self.blockchain_chain.parseInitFile(CHAIN_INIT_FILE)
+        output_transaction_list = self.blockchain_chain.parse_init_file(CHAIN_INIT_FILE)
         for i, transaction in enumerate(output_transaction_list):
             self.assertEqual(correctTxList[i], transaction.stringify())
 
     def test_printChainJson(self):
         self.blockchain_chain = blockchain.Chain()
-        output_transaction_list = self.blockchain_chain.parseInitFile(CHAIN_INIT_FILE)
-        self.blockchain_chain.initBlockChain(output_transaction_list)
-        self.blockchain_chain.printChainJson()
+        output_transaction_list = self.blockchain_chain.parse_init_file(CHAIN_INIT_FILE)
+        self.blockchain_chain.init_blockchain(output_transaction_list)
+        self.blockchain_chain.print_chain_json()
 
     def test_init_blockchain(self):
         self.blockchain_chain = blockchain.Chain()
-        output_transaction_list = self.blockchain_chain.parseInitFile(CHAIN_INIT_FILE)
-        self.blockchain_chain.initBlockChain(output_transaction_list)
+        output_transaction_list = self.blockchain_chain.parse_init_file(CHAIN_INIT_FILE)
+        self.blockchain_chain.init_blockchain(output_transaction_list)
         # ! INCOMPLETE
 
     
