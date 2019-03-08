@@ -1,19 +1,11 @@
 {
-	"datacenters": [ "dc1", "dc2", "dc3"],
-
-	"clients": {
-		"cl1": ["127.0.0.1", 6001],
-		"cl2": ["127.0.0.1", 6002],
-		"cl3": ["127.0.0.1", 6003]
-	},
-
-	"dc_addresses": {
-		"dc1": ["127.0.0.1", 5001],
-		"dc2": ["127.0.0.1", 5002],
-		"dc3": ["127.0.0.1", 5003]
-	},
-
-	"election_timeout": [4,8],
-	"heartbeat_timeout": 2,
-	"client_request_timeout": 8
+	"TCP_IP": ["127.0.0.1"],
+	"NETWORK_MAP": {"1": 6001,
+					"2": 6002,
+					"3": 6003
+					},
+	"BALANCE": [100],
+	"FOLLOWER": 0,
+	"CANDIDATE": 1,
+	"LEADER": 2
 }
