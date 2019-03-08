@@ -80,7 +80,7 @@ def threaded(sending_sockets):
 			break
 			sys.exit()
 		else:
-			print("\nuser_input not recognized. Try again (A-H).\n")
+			print("\nUser input not recognized. Try again (A-H).\n")
 
 class Thread(object):
 	thread_dest = None
