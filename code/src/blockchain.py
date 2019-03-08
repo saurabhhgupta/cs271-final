@@ -134,7 +134,7 @@ class Chain(object):
 				tx_pair = []
 
 	# ! TODO: print block like structures in terminal as a visual "blockchain"
-	def printPrettyChain(self):
+	def print_pretty_chain(self):
 		# print self.chain
 		pass
 	
