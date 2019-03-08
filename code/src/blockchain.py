@@ -32,23 +32,23 @@ class Transaction(object):
 
 class Header(object):
 	'''txA and txB must be HASHED strings (SHA256).'''
-	def __init__(self, currentTerm, prevBlockHeader, hashTxA, hashTxB):
+	def __init__(self, current_term, prev_block_header, hash_tx_a, hash_tx_b):
 		'''
 		Current term represents the term being used in Raft.
 		'''
-		self.currentTerm = currentTerm
+		self.current_term = current_term
 
 		'''
 		Hheader (B − 1) is the SHA256 hash of the header of the previous block, 
 		which is the SHA256 of the string concatenation of term(B - 1), Hheader(B−2), HlistOfTxs(B− 1), and the nonce.
 		'''
-		self.hashPrevBlockHeader = hash(prevBlockHeader)
+		self.hash_prev_block_header = hash(prev_block_header)
 
 		'''
 		HlistOfTxs(B) uses the Merkel Tree data structure, 
 		which is a SHA256 hash of the concatenation of two SHA256 hashes of two transactions.
 		'''
-		self.hashListOfTxs = hash(hashTxA + hashTxB)
+		self.hash_list_of_txs = hash(hash_tx_a + hash_tx_b)
 
 		'''
 		The nonce is a random string such that: Taking the SHA256 of the concatenation of HListOfTxs(H(X)||H(Y)) of the current block 
@@ -60,16 +60,16 @@ class Header(object):
 		'''
 		self.nonce = None
 
-	def calcNonce(self):
+	def calc_nonce(self):
 		self.nonce = 0
 		acceptDigit = ['0','1','2']
-		while hash(str(self.nonce) + self.hashListOfTxs)[-1] not in acceptDigit:
+		while hash(str(self.nonce) + self.hash_list_of_txs)[-1] not in acceptDigit:
 			self.nonce += 1
 
-	def createHeaderJson(self):
-		header = {"currentTerm": self.currentTerm, 
-				"hashPrevBlockHeader": self.hashPrevBlockHeader,
-				"hashListOfTxs": self.hashListOfTxs,
+	def create_header_json(self):
+		header = {"current_term": self.current_term, 
+				"hash_prev_block_header": self.hash_prev_block_header,
+				"hash_list_of_txs": self.hash_list_of_txs,
 				"nonce": self.nonce}
 		return json.dumps(header)
 
@@ -77,16 +77,16 @@ class Header(object):
 	Stringify
 	'''
 	def stringify(self):
-		return "{},{},{},{}".format(self.currentTerm, self.hashPrevBlockHeader, self.hashListOfTxs, self.nonce)
-		# print "{},{},{},{}".format(self.currentTerm, self.hashPrevBlockHeader, self.hashListOfTxs, self.nonce)	
+		return "{},{},{},{}".format(self.current_term, self.hash_prev_block_header, self.hash_list_of_txs, self.nonce)
+		# print "{},{},{},{}".format(self.current_term, self.hash_prev_block_header, self.hash_list_of_txs, self.nonce)	
 
 class Block(object):
 	def __init__(self, transactions, header):
 		self.transactions = transactions # list of two transactions
 		self.header = header
 	
-	def createBlockJson(self):
-		block = {"header": self.header.createHeaderJson(),
+	def create_block_json(self):
+		block = {"header": self.header.create_header_json(),
 				"transactions": self.transactions}
 		return json.dumps(block)
 
@@ -100,52 +100,52 @@ class Chain(object):
 	Assumes \n delimiter for triplets
 	Returns list of transactions
 	'''
-	def parseInitFile(self, file):
-		transactionList = []
-		with open(file, 'r') as configFile:
-			line = configFile.readline()
+	def parse_init_file(self, file):
+		transaction_list = []
+		with open(file, 'r') as config_file:
+			line = config_file.readline()
 			while line:
 				# line = line.strip('\n')
 				source, destination, amount = line.split(' ')
 				transaction = Transaction(source, destination, int(amount))
-				transactionList.append(transaction)
-				line = configFile.readline()
-		# print transactionList
-		return transactionList
+				transaction_list.append(transaction)
+				line = config_file.readline()
+		# print transaction_list
+		return transaction_list
 
 	'''
 	Initializes the blockchain with the input transactions from the config file.
 	'''
 	# ! UNTESTED FUNCTION
-	def initBlockChain(self, inputTransactionList):
-		txPair = []
+	def init_blockchain(self, input_transaction_list):
+		tx_pair = []
 		header = None
-		for index, transaction in enumerate(inputTransactionList):
-			txPair.append(transaction.stringify())
+		for index, transaction in enumerate(input_transaction_list):
+			tx_pair.append(transaction.stringify())
 			if index % 2 == 1: # if it is the 2nd transaction in the pair
 				if index == 1:
-					hashPrevHeader = 'NULL' 
+					hash_prev_header = 'NULL' 
 				else:
-					hashPrevHeader = hash(header.stringify())
-				header = Header(0, hashPrevHeader, hash(txPair[0]), hash(txPair[1]))
-				block = Block(txPair, header)
-				block.header.calcNonce()
+					hash_prev_header = hash(header.stringify())
+				header = Header(0, hash_prev_header, hash(tx_pair[0]), hash(tx_pair[1]))
+				block = Block(tx_pair, header)
+				block.header.calc_nonce()
 				self.chain.append(block)
-				txPair = []
+				tx_pair = []
 
 	# ! TODO: print block like structures in terminal as a visual "blockchain"
 	def printPrettyChain(self):
 		# print self.chain
 		pass
 	
-	def createChainJson(self):
-		return json.dumps({"block_{}".format(i): self.chain[i].createBlockJson() for i in range(len(self.chain))})
+	def create_chain_json(self):
+		return json.dumps({"block_{}".format(i): self.chain[i].create_block_json() for i in range(len(self.chain))})
 	
-	def printChainJson(self):
-		print(self.createChainJson())
+	def print_chain_json(self):
+		print(self.create_chain_json())
 
 if __name__ == "__main__":
 	bc = Chain()
-	output = bc.parseInitFile(CHAIN_INIT_FILE)
-	bc.initBlockChain(output)
-	bc.printChainJson()
+	output = bc.parse_init_file(CHAIN_INIT_FILE)
+	bc.init_blockchain(output)
+	bc.print_chain_json()
