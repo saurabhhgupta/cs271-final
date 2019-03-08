@@ -134,6 +134,7 @@ class Chain(object):
 
 	# ! TODO: print block like structures in terminal as a visual "blockchain"
 	def print_pretty_chain(self):
+		# note, hash256 always returns a 64 character long string for hexdigest()
 		# print self.chain
 		pass
 	
@@ -144,7 +145,7 @@ class Chain(object):
 		print(self.create_chain_json())
 
 	# ! TODO: Compare chains. Return if valid leader? or Return if updated follower?
-	def chainCompare(self):
+	def chain_compare(self):
 		pass
 
 
