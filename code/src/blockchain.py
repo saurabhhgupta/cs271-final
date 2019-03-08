@@ -116,7 +116,6 @@ class Chain(object):
 	'''
 	Initializes the blockchain with the input transactions from the config file.
 	'''
-	# ! UNTESTED FUNCTION
 	def init_blockchain(self, input_transaction_list):
 		tx_pair = []
 		header = None
@@ -143,6 +142,11 @@ class Chain(object):
 	
 	def print_chain_json(self):
 		print(self.create_chain_json())
+
+	# ! TODO: Compare chains. Return if valid leader? or Return if updated follower?
+	def chainCompare(self):
+		pass
+
 
 if __name__ == "__main__":
 	bc = Chain()
