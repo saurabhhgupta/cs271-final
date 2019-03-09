@@ -28,7 +28,7 @@ CHANNELS = {port : [i for i in PORTS if i != port] for port in PORTS}
 BALANCE = {port : data["BALANCE"][0] for port in PORTS}
 FOLLOWER, CANDIDATE, LEADER = data["FOLLOWER"], data["CANDIDATE"], data["LEADER"]
 CONNECTION_ONLINE = True
-INIT_BLOCKCHAIN_FILE = "initialize_blockchain.txt"
+INIT_BLOCKCHAIN_FILE = "init_chain.txt"
 # majority is 2 b/c we have 3 sites
 MAJORITY = 2
 SOCKET_LISTEN_BOUND = 10
@@ -534,6 +534,14 @@ def main():
 		threads_recv.append(Thread(read_socket, (object,)).create_thread())
 
 	time.sleep(random.randint(0, 2500)/1000)
+	# initialize the input chain file
+	with open(INIT_BLOCKCHAIN_FILE, 'r') as file:
+		transactions = file.readlines()
+	transactions = [i.rstrip() for i in transactions]
+	# put each transaction into the queue for processing
+	for i in transactions:
+		queue_transactions.put(i)
+
 	thread_heartbeat = Thread(leader_alive, ()).create_thread()
 	thread_queue = Thread(process, (current_port, )).create_thread()
 	thread_task = Thread(threaded, (objects_socket_send,)).create_thread()
