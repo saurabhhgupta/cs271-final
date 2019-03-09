@@ -505,7 +505,7 @@ def create_block():
 			print("A log entry has been committed.")
 			# each site has its own index, which is just the length of its log 
 			# the log length should follow the current log's length
-			next_index = {6001: len(log), 6002: len(log), 6003: len(log)}
+			next_index = {PORTS[0]: len(log), PORTS[1]: len(log), PORTS[2]: len(log)}
 			# since block has been added already, reset the variable
 			current_block = None
 
