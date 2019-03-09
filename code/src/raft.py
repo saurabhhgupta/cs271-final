@@ -1,3 +1,5 @@
+# encoding=utf8
+
 import os
 import sys
 import json
@@ -9,8 +11,10 @@ import string
 import random
 import pickle
 import math
-# ! dont need hashlib for raft, but yes for blockchain
 import hashlib
+from string import ascii_uppercase
+from string import digits
+from random import SystemRandom
 
 ########## Configuration setup ##########
 FILE = "config.json"
@@ -204,6 +208,48 @@ class AppendEntriesRPC(object):
 	def pack(self):
 		return pickle.dumps(self)
 
+class Block(object):
+	current_term = 0
+	prev_header_hash = None
+	current_transactions_hash = None
+	nonce = None
+	transaction_list = None
+
+	def __init__(self, prev_header_hash):
+		self.transaction_list = []
+		self.prev_header_hash = prev_header_hash
+
+	# ! TODO: add transaction
+	def add_transaction(self, transaction):
+		self.transaction_list.append(transaction)
+
+	# ! TODO: calculate number of transactions
+	def calculate_number_of_transactions(self):
+		return len(self.transaction_list)
+
+	# ! TODO: calculate the nonce (done)
+	def calculate_nonce(self):
+		accept_digit = ['0', '1', '2']
+		self.nonce = generate_string()
+		while hash(str(self.nonce) + self.current_transactions_hash)[-1] not in accept_digit:
+			calculate_nonce()
+
+	# ! TODO: formulate the block
+	def formulate_block(self, term):
+		tx_a, tx_b = hash(self.transaction_list[0]), hash(self.transaction_list[1])
+		self.current_transactions_hash = hash(tx_a + tx_b)
+		self.nonce = self.calculate_nonce()
+		self.current_term = term
+
+	# ! TODO: display the block contents (print_blockchain)
+	def print_block(self, number):
+		print("block # - {}".format(number))
+		print("term - {}".format(self.current_term))
+		print("H_header(B-1) - {}".format(self.prev_header_hash))
+		print("H_txs(B) - {}".format(self.current_transactions_hash))
+		print("nonce - {}".format(self.nonce))
+		print("list of trans - {}".format(', '.join(self.transaction_list)))
+
 current_port = 0
 objects_socket_recv = []
 objects_socket_send = {}
@@ -211,6 +257,7 @@ queue_task = queue.Queue()
 queue_transactions = queue.Queue()
 current_money = 0
 current_term = 0
+current_block = None
 heartbeat = 0
 current_leader = 0
 current_status = 0
@@ -350,11 +397,21 @@ def leader_alive():
 def get_balance():
 	global current_port
 	global log
-	starting_balance = 696969
+	initial_balance = BALANCE[current_port]
 	# ! TODO: need to cycle through the transactions in a block
 	# ! check if the current port is the same as the sender, if so then decrement the amt 
 	# ! if receiver == current_port then increment the amt
-	return starting_balance
+	for i in log:
+		for j in i.transaction_list:
+			j = j.split()
+			sender, receiver, amount = int(j[0]), int(j[1]), int(j[2])
+			# if sending, subtract from bank balance
+			if current_port == sender:
+				initial_balance -= amount
+			# if receiving, add to bank balance
+			if current_port == receiver:
+				initial_balance += amount
+	return initial_balance
 
 def send_heartbeat(current_port):
 	global current_term
@@ -394,6 +451,13 @@ def send_request_vote(current_port, current_term):
 		else:
 			send_message = RequestVoteRPC(current_port, current_term, len(log), log[-1].current_term).pack()
 		socket.send_to_socket(send_message)
+
+# Source: https://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python
+def generate_string():
+	return ''.join(SystemRandom().choice(ascii_uppercase + digits) for _ in range(8))
+
+def hash(data):
+	return hashlib.sha256(data.encode('utf-8')).hexdigest()
 
 def main():
 	global current_port
