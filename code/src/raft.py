@@ -537,9 +537,11 @@ def main():
 	thread_heartbeat = Thread(leader_alive, ()).create_thread()
 	thread_queue = Thread(process, (current_port, )).create_thread()
 	thread_task = Thread(threaded, (objects_socket_send,)).create_thread()
+	thread_transactions = Thread(create_block, ()).create_thread()
 	thread_task.join_thread()
 	thread_queue.join_thread()
 	thread_heartbeat.join_thread()
+	thread_transactions.join_thread()
 
 	for thread in threads_recv:
 		thread.join_thread()
