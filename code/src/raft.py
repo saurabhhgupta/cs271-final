@@ -459,6 +459,56 @@ def generate_string():
 def hash(data):
 	return hashlib.sha256(data.encode('utf-8')).hexdigest()
 
+def create_block():
+	global log
+	global next_index
+	global queue_transactions
+	global current_block
+	global current_leader
+	global current_port
+	global current_status
+
+	# delay until leader elections is finished
+	while current_leader == 0:
+		time.sleep(0.01)
+
+	# empty out the queue if i'm the leader
+	if current_port != current_leader:
+		queue_transactions.queue.clear()
+
+	while True:
+		# just wait if there aren't any transactions
+		while queue_transactions.empty():
+			time.sleep(0.1)
+		data = queue_transactions.get()
+		if current_block == None:
+			# block #1 created here
+			if len(log) == 0:
+				prev_header_hash = hash('NULL')
+			else:
+				# header contains: 1) term #, 2) H_header(B-1), 3) H_txs(B), 4) nonce
+				block_term = str(log[-1].current_term)
+				block_prev_header_hash = str(log[-1].prev_header_hash)
+				block_current_transactions_hash = str(log[-1].current_transactions_hash)
+				block_nonce = str(log[-1].nonce)				
+				# need to hash all 4 things
+				prev_header_hash = hash(block_term + block_prev_header_hash + block_current_transactions_hash + block_nonce)
+			current_block = Block(prev_header_hash)
+		current_block.add_transaction(data)
+		 # block is populated --> commit it & create the new block
+		if current_block.calculate_number_of_transactions() == 2:
+			print("A block has been added to the blockchain.")
+			# formulate_block takes in 1 arg (term #)
+			current_block.formulate_block(current_term)
+			# add block to log
+			log.append(current_block)
+			print("A log entry has been committed.")
+			# each site has its own index, which is just the length of its log 
+			# the log length should follow the current log's length
+			next_index = {6001: len(log), 6002: len(log), 6003: len(log)}
+			# since block has been added already, reset the variable
+			current_block = None
+
 def main():
 	global current_port
 	global current_money
