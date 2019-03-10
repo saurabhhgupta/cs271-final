@@ -1,3 +1,5 @@
+# encoding=utf8
+
 import os
 import sys
 import json
@@ -9,8 +11,10 @@ import string
 import random
 import pickle
 import math
-# ! dont need hashlib for raft, but yes for blockchain
 import hashlib
+from string import ascii_uppercase
+from string import digits
+from random import SystemRandom
 
 ########## Configuration setup ##########
 FILE = "config.json"
@@ -24,7 +28,7 @@ CHANNELS = {port : [i for i in PORTS if i != port] for port in PORTS}
 BALANCE = {port : data["BALANCE"][0] for port in PORTS}
 FOLLOWER, CANDIDATE, LEADER = data["FOLLOWER"], data["CANDIDATE"], data["LEADER"]
 CONNECTION_ONLINE = True
-INIT_BLOCKCHAIN_FILE = "initialize_blockchain.txt"
+INIT_BLOCKCHAIN_FILE = "init_chain.txt"
 # majority is 2 b/c we have 3 sites
 MAJORITY = 2
 SOCKET_LISTEN_BOUND = 10
@@ -38,7 +42,7 @@ def threaded(sending_sockets):
 	global heartbeat
 	global current_term
 
-	while(True):
+	while True:
 		query_1 = "\nWhat would you like to do?\n"
 		query_2 = "> A. Send money to a bank <args: (to where) (amount)>\n"
 		query_3 = "> B. Print balance\n"
@@ -66,13 +70,20 @@ def threaded(sending_sockets):
 		elif user_input[0] == "B":
 			print("Balance = ${}".format(get_balance()))
 		elif user_input[0] == "C":
-			print("fuck me")
+			print("\nThe blockchain has been displayed below.\n")
+			for i, j in enumerate(log):
+				j.print_block(i)
+			if len(log) == 0:
+				print("The chain is currently empty.")
 		elif user_input[0] == "D":
+			# turn off the server
+			# this is our way of simulating node failures
 			halt_process = 1
+		elif user_input[0] == "E":
+			# turn on the server (halt = False)
+			halt_process = 0
 		elif user_input[0] == "F":
 			pass
-		elif user_input[0] == "E":
-			halt_process = 0
 		elif user_input[0] == "G":
 			CONNECTION_ONLINE = not CONNECTION_ONLINE
 			print("Connection online:", CONNECTION_ONLINE)
@@ -81,7 +92,7 @@ def threaded(sending_sockets):
 			sys.exit()
 		else:
 			print("\nUser input not recognized. Try again (A-H).\n")
-
+			
 class Thread(object):
 	thread_dest = None
 	thread_args = None
@@ -115,7 +126,7 @@ class Socket(object):
 			print("[{}] ERROR! Failed to send.".format(int(sys.argv[1])), socket_error)
 
 	def create_send_socket(self):
-		while(True):
+		while True:
 			try:
 				self.socket_object = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				self.socket_object.connect((self.socket_ip, self.socket_port))
@@ -127,7 +138,7 @@ class Socket(object):
 				return self
 
 	def create_recv_socket(self):
-		while(True):
+		while True:
 			try:
 				self.socket_object = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				self.socket_object.bind((self.socket_ip, self.socket_port))
@@ -204,6 +215,60 @@ class AppendEntriesRPC(object):
 	def pack(self):
 		return pickle.dumps(self)
 
+class Block(object):
+	current_term = 0
+	prev_header_hash = None
+	current_transactions_hash = None
+	nonce = None
+	transaction_list = None
+
+	def __init__(self, prev_header_hash):
+		self.transaction_list = []
+		self.prev_header_hash = prev_header_hash
+
+	# ! TODO: add transaction
+	def add_transaction(self, transaction):
+		self.transaction_list.append(transaction)
+
+	# ! TODO: calculate number of transactions
+	def calculate_number_of_transactions(self):
+		return len(self.transaction_list)
+
+	# ! TODO: calculate the nonce
+	def calculate_nonce(self):
+		# ! recursive method not working for some reason
+		# accept_digit = ['0', '1', '2']
+		# self.nonce = generate_string()
+		# while hash(str(self.nonce) + self.current_transactions_hash)[-1] not in accept_digit:
+		# 	self.calculate_nonce()
+		accept_digit = ['0', '1', '2']
+		while True:
+			# generate a random string of length 8
+			nonce = generate_string()
+			# hash it
+			hashed_nonce = hash(self.current_transactions_hash + nonce)
+			# once the last digit is 0, 1, or 2 --> return it and stop the loop
+			if hashed_nonce[-1] in accept_digit:
+				return nonce
+
+	# ! TODO: formulate the block
+	def formulate_block(self, term):
+		tx_a, tx_b = hash(self.transaction_list[0]), hash(self.transaction_list[1])
+		self.current_transactions_hash = hash(tx_a + tx_b)
+		self.nonce = self.calculate_nonce()
+		self.current_term = term
+
+	# ! TODO: display the block contents (print_blockchain)
+	def print_block(self, number):
+		print("\n-----------------------")
+		print("block # - {}".format(number))
+		print("term - {}".format(self.current_term))
+		print("H_header(B-1) - {}".format(self.prev_header_hash))
+		print("H_txs(B) - {}".format(self.current_transactions_hash))
+		print("nonce - {}".format(self.nonce))
+		print("list of trans - {}".format(', '.join(self.transaction_list)))
+		print("------------------------\n")
+
 current_port = 0
 objects_socket_recv = []
 objects_socket_send = {}
@@ -211,6 +276,7 @@ queue_task = queue.Queue()
 queue_transactions = queue.Queue()
 current_money = 0
 current_term = 0
+current_block = None
 heartbeat = 0
 current_leader = 0
 current_status = 0
@@ -222,7 +288,7 @@ halt_process = 0
 
 def read_socket(packet):
 	global queue_task
-	while(True):
+	while True:
 		try:
 			data = packet.recv(2048)
 			if data:
@@ -249,7 +315,7 @@ def process(current_port):
 	global queue_transactions
 	global halt_process
 
-	while(True):
+	while True:
 		while queue_task.empty():
 			time.sleep(0.1)
 		data = pickle.loads(queue_task.get())
@@ -330,7 +396,7 @@ def leader_alive():
 	global halt_process
 	global next_index
 
-	while(True):
+	while True:
 		if not halt_process:
 			if current_status == FOLLOWER or current_status == CANDIDATE:
 				if heartbeat == 5:
@@ -350,11 +416,21 @@ def leader_alive():
 def get_balance():
 	global current_port
 	global log
-	starting_balance = 696969
+	initial_balance = BALANCE[current_port]
 	# ! TODO: need to cycle through the transactions in a block
 	# ! check if the current port is the same as the sender, if so then decrement the amt 
 	# ! if receiver == current_port then increment the amt
-	return starting_balance
+	for i in log:
+		for j in i.transaction_list:
+			j = j.split()
+			sender, receiver, amount = int(j[0]), int(j[1]), int(j[2])
+			# if sending, subtract from bank balance
+			if current_port == sender:
+				initial_balance -= amount
+			# if receiving, add to bank balance
+			if current_port == receiver:
+				initial_balance += amount
+	return initial_balance
 
 def send_heartbeat(current_port):
 	global current_term
@@ -395,6 +471,63 @@ def send_request_vote(current_port, current_term):
 			send_message = RequestVoteRPC(current_port, current_term, len(log), log[-1].current_term).pack()
 		socket.send_to_socket(send_message)
 
+# Source: https://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python
+def generate_string():
+	return ''.join(SystemRandom().choice(ascii_uppercase + digits) for _ in range(8))
+
+def hash(data):
+	return hashlib.sha256(data.encode('utf-8')).hexdigest()
+
+def create_block():
+	global log
+	global next_index
+	global queue_transactions
+	global current_block
+	global current_leader
+	global current_port
+	global current_status
+
+	# delay until leader elections is finished
+	while current_leader == 0:
+		time.sleep(0.01)
+
+	# empty out the queue if i'm the leader
+	if current_port != current_leader:
+		queue_transactions.queue.clear()
+
+	while True:
+		# just wait if there aren't any transactions
+		while queue_transactions.empty():
+			time.sleep(0.1)
+		data = queue_transactions.get()
+		if current_block == None:
+			# block #1 created here
+			if len(log) == 0:
+				prev_header_hash = hash('NULL')
+			else:
+				# header contains: 1) term #, 2) H_header(B-1), 3) H_txs(B), 4) nonce
+				block_term = str(log[-1].current_term)
+				block_prev_header_hash = str(log[-1].prev_header_hash)
+				block_current_transactions_hash = str(log[-1].current_transactions_hash)
+				block_nonce = str(log[-1].nonce)				
+				# need to hash all 4 things
+				prev_header_hash = hash(block_term + block_prev_header_hash + block_current_transactions_hash + block_nonce)
+			current_block = Block(prev_header_hash)
+		current_block.add_transaction(data)
+		 # block is populated --> commit it & create the new block
+		if current_block.calculate_number_of_transactions() == 2:
+			print("A block has been added to the blockchain.")
+			# formulate_block takes in 1 arg (term #)
+			current_block.formulate_block(current_term)
+			# add block to log
+			log.append(current_block)
+			print("A log entry has been committed.")
+			# each site has its own index, which is just the length of its log 
+			# the log length should follow the current log's length
+			next_index = {PORTS[0]: len(log), PORTS[1]: len(log), PORTS[2]: len(log)}
+			# since block has been added already, reset the variable
+			current_block = None
+
 def main():
 	global current_port
 	global current_money
@@ -420,12 +553,22 @@ def main():
 		threads_recv.append(Thread(read_socket, (object,)).create_thread())
 
 	time.sleep(random.randint(0, 2500)/1000)
+	# initialize the input chain file
+	with open(INIT_BLOCKCHAIN_FILE, 'r') as file:
+		transactions = file.readlines()
+	transactions = [i.rstrip() for i in transactions]
+	# put each transaction into the queue for processing
+	for i in transactions:
+		queue_transactions.put(i)
+
 	thread_heartbeat = Thread(leader_alive, ()).create_thread()
 	thread_queue = Thread(process, (current_port, )).create_thread()
 	thread_task = Thread(threaded, (objects_socket_send,)).create_thread()
+	thread_transactions = Thread(create_block, ()).create_thread()
 	thread_task.join_thread()
 	thread_queue.join_thread()
 	thread_heartbeat.join_thread()
+	thread_transactions.join_thread()
 
 	for thread in threads_recv:
 		thread.join_thread()
