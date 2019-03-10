@@ -42,7 +42,7 @@ def threaded(sending_sockets):
 	global heartbeat
 	global current_term
 
-	while(True):
+	while True:
 		query_1 = "\nWhat would you like to do?\n"
 		query_2 = "> A. Send money to a bank <args: (to where) (amount)>\n"
 		query_3 = "> B. Print balance\n"
@@ -70,13 +70,20 @@ def threaded(sending_sockets):
 		elif user_input[0] == "B":
 			print("Balance = ${}".format(get_balance()))
 		elif user_input[0] == "C":
-			print("fuck me")
+			print("\nThe blockchain has been displayed below.\n")
+			for i, j in enumerate(log):
+				j.print_block(i)
+			if len(log) == 0:
+				print("The chain is currently empty.")
 		elif user_input[0] == "D":
+			# turn off the server
+			# this is our way of simulating node failures
 			halt_process = 1
+		elif user_input[0] == "E":
+			# turn on the server (halt = False)
+			halt_process = 0
 		elif user_input[0] == "F":
 			pass
-		elif user_input[0] == "E":
-			halt_process = 0
 		elif user_input[0] == "G":
 			CONNECTION_ONLINE = not CONNECTION_ONLINE
 			print("Connection online:", CONNECTION_ONLINE)
@@ -85,7 +92,7 @@ def threaded(sending_sockets):
 			sys.exit()
 		else:
 			print("\nUser input not recognized. Try again (A-H).\n")
-
+			
 class Thread(object):
 	thread_dest = None
 	thread_args = None
@@ -119,7 +126,7 @@ class Socket(object):
 			print("[{}] ERROR! Failed to send.".format(int(sys.argv[1])), socket_error)
 
 	def create_send_socket(self):
-		while(True):
+		while True:
 			try:
 				self.socket_object = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				self.socket_object.connect((self.socket_ip, self.socket_port))
@@ -131,7 +138,7 @@ class Socket(object):
 				return self
 
 	def create_recv_socket(self):
-		while(True):
+		while True:
 			try:
 				self.socket_object = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				self.socket_object.bind((self.socket_ip, self.socket_port))
@@ -227,12 +234,22 @@ class Block(object):
 	def calculate_number_of_transactions(self):
 		return len(self.transaction_list)
 
-	# ! TODO: calculate the nonce (done)
+	# ! TODO: calculate the nonce
 	def calculate_nonce(self):
+		# ! recursive method not working for some reason
+		# accept_digit = ['0', '1', '2']
+		# self.nonce = generate_string()
+		# while hash(str(self.nonce) + self.current_transactions_hash)[-1] not in accept_digit:
+		# 	self.calculate_nonce()
 		accept_digit = ['0', '1', '2']
-		self.nonce = generate_string()
-		while hash(str(self.nonce) + self.current_transactions_hash)[-1] not in accept_digit:
-			calculate_nonce()
+		while True:
+			# generate a random string of length 8
+			nonce = generate_string()
+			# hash it
+			hashed_nonce = hash(self.current_transactions_hash + nonce)
+			# once the last digit is 0, 1, or 2 --> return it and stop the loop
+			if hashed_nonce[-1] in accept_digit:
+				return nonce
 
 	# ! TODO: formulate the block
 	def formulate_block(self, term):
@@ -243,12 +260,14 @@ class Block(object):
 
 	# ! TODO: display the block contents (print_blockchain)
 	def print_block(self, number):
+		print("\n-----------------------")
 		print("block # - {}".format(number))
 		print("term - {}".format(self.current_term))
 		print("H_header(B-1) - {}".format(self.prev_header_hash))
 		print("H_txs(B) - {}".format(self.current_transactions_hash))
 		print("nonce - {}".format(self.nonce))
 		print("list of trans - {}".format(', '.join(self.transaction_list)))
+		print("------------------------\n")
 
 current_port = 0
 objects_socket_recv = []
@@ -269,7 +288,7 @@ halt_process = 0
 
 def read_socket(packet):
 	global queue_task
-	while(True):
+	while True:
 		try:
 			data = packet.recv(2048)
 			if data:
@@ -296,7 +315,7 @@ def process(current_port):
 	global queue_transactions
 	global halt_process
 
-	while(True):
+	while True:
 		while queue_task.empty():
 			time.sleep(0.1)
 		data = pickle.loads(queue_task.get())
@@ -377,7 +396,7 @@ def leader_alive():
 	global halt_process
 	global next_index
 
-	while(True):
+	while True:
 		if not halt_process:
 			if current_status == FOLLOWER or current_status == CANDIDATE:
 				if heartbeat == 5:
