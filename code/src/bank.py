@@ -448,19 +448,19 @@ def send_money(money, port_sender, port_receiver):
 	send_message = Message(port_sender, port_receiver, money, "money").pack()
 	objects_socket_send[port_receiver].send_to_socket(send_message)
 
-def send_vote(current_port, unpacked_data, current_term, vote_granted):
-	unpacked_data.result_term = current_term
-	unpacked_data.result_vote_granted = vote_granted
-	unpacked_data.vote_from = current_port
-	send_message = unpacked_data.pack()
-	objects_socket_send[unpacked_data.candidate_id].send_to_socket(send_message)
+def send_vote(current_port, data, current_term, vote_granted):
+	data.result_term = current_term
+	data.result_vote_granted = vote_granted
+	data.vote_from = current_port
+	send_message = data.pack()
+	objects_socket_send[data.candidate_id].send_to_socket(send_message)
 
-def return_append(unpacked_data, term, success, current_port):
-	unpacked_data.result_term = term
-	unpacked_data.success = success
-	unpacked_data.port_sender = current_port
-	send_message = unpacked_data.pack()
-	objects_socket_send[unpacked_data.leader_id].send_to_socket(send_message)
+def return_append(data, term, success, current_port):
+	data.result_term = term
+	data.success = success
+	data.port_sender = current_port
+	send_message = data.pack()
+	objects_socket_send[data.leader_id].send_to_socket(send_message)
 
 def send_request_vote(current_port, current_term):
 	global log
@@ -561,6 +561,7 @@ def main():
 	for i in transactions:
 		queue_transactions.put(i)
 
+	# threading logic
 	thread_heartbeat = Thread(leader_alive, ()).create_thread()
 	thread_queue = Thread(process, (current_port, )).create_thread()
 	thread_task = Thread(threaded, (objects_socket_send,)).create_thread()
