@@ -56,17 +56,17 @@ def threaded(sending_sockets):
 		user_input = input(query)
 		user_input = user_input.split()
 		if user_input[0] == "A":
-			where_to_send = int(user_input[1])
-			amount_to_send = int(user_input[2])
-			if amount_to_send > get_balance():
+			destination = int(user_input[1])
+			amount = int(user_input[2])
+			if amount > get_balance():
 				print("Not enough money in [{}]. Balance = ${}".format(current_port, get_balance()))
 			else:
 				if current_port != current_leader:
-					send_money("{} {} {}".format(str(current_port), str(where_to_send), str(amount_to_send)), current_port, current_leader)
+					send_money("{} {} {}".format(str(current_port), str(destination), str(amount)), current_port, current_leader)
 				else:
 					# current server is leader
-					queue_transactions.put("{} {} {}".format(str(current_port), str(where_to_send), str(amount_to_send)))
-				print("[{}] sent ${} to [{}].".format(current_port, amount_to_send, str(where_to_send)))
+					queue_transactions.put("{} {} {}".format(str(current_port), str(destination), str(amount)))
+				print("[{}] sent ${} to [{}].".format(current_port, amount, str(destination)))
 		elif user_input[0] == "B":
 			print("Balance = ${}".format(get_balance()))
 		elif user_input[0] == "C":
@@ -557,6 +557,10 @@ def main():
 	with open(INIT_BLOCKCHAIN_FILE, 'r') as file:
 		transactions = file.readlines()
 	transactions = [i.rstrip() for i in transactions]
+
+	# ! TODO: need to make a parsing function to turn A,B,C into 6001,6002,6003
+
+
 	# put each transaction into the queue for processing
 	for i in transactions:
 		queue_transactions.put(i)
