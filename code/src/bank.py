@@ -35,6 +35,7 @@ SOCKET_LISTEN_BOUND = 10
 ########## End configuration setup ##########
 
 def threaded(sending_sockets):
+	global client_name
 	global current_money
 	global current_port
 	global current_leader
@@ -43,7 +44,7 @@ def threaded(sending_sockets):
 	global current_term
 
 	while True:
-		query_1 = "\nWhat would you like to do?\n"
+		query_1 = "\nClient {}: What would you like to do?\n".format(client_name)
 		query_2 = "> A. Send money to a bank <args: (to where) (amount)>\n"
 		query_3 = "> B. Print balance\n"
 		query_4 = "> C. Print blockchain\n"
@@ -55,6 +56,9 @@ def threaded(sending_sockets):
 		query = query_1 + query_2 + query_3 + query_4 + query_5 + query_6 + query_7 + query_8 + "\n"
 		user_input = input(query)
 		user_input = user_input.split()
+		if len(user_input) == 0:
+			print('No input.\n')
+			continue
 		if user_input[0] == "A":
 			destination = int(user_input[1])
 			amount = int(user_input[2])
@@ -221,10 +225,18 @@ class Block(object):
 	current_transactions_hash = None
 	nonce = None
 	transaction_list = None
+	client_names = ['', 'A', 'B', 'C']
 
 	def __init__(self, prev_header_hash):
 		self.transaction_list = []
 		self.prev_header_hash = prev_header_hash
+
+	def convert_port_to_name(self, port):
+		return self.client_names[int(port)%10]
+
+	def rename_client_transaction(self, transaction):
+		transaction_parts = transaction.split(' ')
+		return '{} {} {}'.format(self.convert_port_to_name(transaction_parts[0]), self.convert_port_to_name(transaction_parts[1]), transaction_parts[2])
 
 	# ! TODO: add transaction
 	def add_transaction(self, transaction):
@@ -266,7 +278,7 @@ class Block(object):
 		print("H_header(B-1) - {}".format(self.prev_header_hash))
 		print("H_txs(B) - {}".format(self.current_transactions_hash))
 		print("nonce - {}".format(self.nonce))
-		print("list of trans - {}".format(', '.join(self.transaction_list)))
+		print("list of trans - {}".format('{}, {}'.format(self.rename_client_transaction(self.transaction_list[0]), self.rename_client_transaction(self.transaction_list[1]))))
 		print("------------------------\n")
 
 current_port = 0
@@ -532,10 +544,14 @@ def main():
 	global current_port
 	global current_money
 	global current_status
+	global client_name
 	threads_recv = []
 
 	current_port = int(sys.argv[1])
 	print("current port: ", current_port)
+	client_names = ['', 'A', 'B', 'C']
+	client_name = client_names[int(current_port)%10]
+	print("Client: ", client_name)
 	current_status = FOLLOWER
 	port_list = CHANNELS[current_port]
 	print("list of ports: ", port_list)
