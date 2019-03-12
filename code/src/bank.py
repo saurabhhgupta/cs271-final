@@ -42,9 +42,16 @@ def threaded(sending_sockets):
 	global halt_process
 	global heartbeat
 	global current_term
+	port_conv = {'A': '6001',
+				'B': '6002',
+				'C': '6003'}
+	name_conv = ['F', 'A', 'B', 'C']
 
 	while True:
-		query_1 = "\nClient {}: What would you like to do?\n".format(client_name)
+		if current_leader == current_port:
+			query_1 = "\nLeader-Client {}: What would you like to do?\n".format(client_name)
+		else:
+			query_1 = "\nFollower-Client {}: What would you like to do?\n".format(client_name)
 		query_2 = "> A. Send money to a bank <args: (to where) (amount)>\n"
 		query_3 = "> B. Print balance\n"
 		query_4 = "> C. Print blockchain\n"
@@ -60,7 +67,8 @@ def threaded(sending_sockets):
 			print('No input.\n')
 			continue
 		if user_input[0] == "A":
-			destination = int(user_input[1])
+			destination = user_input[1]
+			destination = port_conv[destination]
 			amount = int(user_input[2])
 			if amount > get_balance():
 				print("Not enough money in [{}]. Balance = ${}".format(current_port, get_balance()))
@@ -70,7 +78,7 @@ def threaded(sending_sockets):
 				else:
 					# current server is leader
 					queue_transactions.put("{} {} {}".format(str(current_port), str(destination), str(amount)))
-				print("[{}] sent ${} to [{}].".format(current_port, amount, str(destination)))
+				print("[{}] sent ${} to [{}].".format(name_conv[int(current_port)%10], amount, name_conv[int(destination)%10]))
 		elif user_input[0] == "B":
 			print("Balance = ${}".format(get_balance()))
 		elif user_input[0] == "C":
