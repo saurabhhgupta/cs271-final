@@ -48,6 +48,7 @@ def threaded(sending_sockets):
 				'C': '6003'}
 	name_conv = ['F', 'A', 'B', 'C']
 
+	halt_process = 0
 	while True:
 		if current_leader == current_port:
 			query_1 = "\nLeader-Client {}: What would you like to do?\n".format(client_name)
@@ -55,7 +56,7 @@ def threaded(sending_sockets):
 			query_1 = "\nFollower-Client {}: What would you like to do?\n".format(client_name)
 		query_2 = "> A. Send money to a bank <args: (to where) (amount)>\n"
 		query_3 = "> B. Print balance\n"
-		query_4 = "> C. Print blockchain\n"
+		query_4 = "> C. Print blockchain <args: (C-client) or (S-server)>\n"
 		query_5 = "> D. Turn off server\n"
 		query_6 = "> E. Turn on server\n"
 		query_7 = "> F. Show status\n"
@@ -84,10 +85,23 @@ def threaded(sending_sockets):
 			print("Balance = ${}".format(get_balance()))
 		elif user_input[0] == "C":
 			print("\nThe blockchain has been displayed below.\n")
-			for i, j in enumerate(log):
-				j.print_block(i)
-			if len(log) == 0:
-				print("The chain is currently empty.")
+			if user_input[1] == 'C': #client command
+				for i, j in enumerate(log):
+					j.print_block(i)
+				if len(log) == 0:
+					print("The chain is currently empty.")
+			elif user_input[1] == 'S': #server command
+				if halt_process:
+					for i, j in enumerate(prev_log):
+						j.print_block(i)
+					if len(prev_log) == 0:
+						print("The chain is currently empty.")
+				else:
+					for i, j in enumerate(log):
+						j.print_block(i)
+					if len(log) == 0:
+						print("The chain is currently empty.")
+			
 		elif user_input[0] == "D":
 			# turn off the server
 			# this is our way of simulating node failures
@@ -336,6 +350,7 @@ def process(current_port):
 	global PORTS
 	global queue_task
 	global log
+	global prev_log
 	global current_term
 	global current_status
 	global voted_for
@@ -347,13 +362,17 @@ def process(current_port):
 	global halt_process
 	global has_recv_append
 
+	prev_log = None
+
 	while True:
 		while queue_task.empty():
 			time.sleep(0.01)
 		data = pickle.loads(queue_task.get())
-		if halt_process:
-			continue
-		if (data.message_type == "RequestVoteRPC") and (data.result_vote_granted == None):
+		if halt_process and prev_log is None:
+			prev_log = log
+		elif not halt_process and prev_log != None:
+			prev_log = None	
+		if (data.message_type == "RequestVoteRPC") and (data.result_vote_granted == None) and not halt_process:
 			# check to see if requested leader qualifies to become new leader
 			if data.term > current_term:
 				current_term = data.term
@@ -368,7 +387,7 @@ def process(current_port):
 					print("Vote granted to {}.".format(data.candidate_id))
 					send_vote(current_port, data, current_term, 1)
 		# check if the server voted current server as leader
-		elif (data.message_type == "RequestVoteRPC") and (data.result_vote_granted != None):
+		elif (data.message_type == "RequestVoteRPC") and (data.result_vote_granted != None) and not halt_process :
 			if data.result_vote_granted == 1:
 				self_votes += 1
 			# gained majority --> winner
