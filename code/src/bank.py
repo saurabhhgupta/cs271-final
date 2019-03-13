@@ -28,13 +28,14 @@ CHANNELS = {port : [i for i in PORTS if i != port] for port in PORTS}
 BALANCE = {port : data["BALANCE"][0] for port in PORTS}
 FOLLOWER, CANDIDATE, LEADER = data["FOLLOWER"], data["CANDIDATE"], data["LEADER"]
 CONNECTION_ONLINE = True
-INIT_BLOCKCHAIN_FILE = "init_chain.txt"
+INIT_BLOCKCHAIN_FILE = "input_100.txt"
 # majority is 2 b/c we have 3 sites
 MAJORITY = 2
 SOCKET_LISTEN_BOUND = 10
 ########## End configuration setup ##########
 
 def threaded(sending_sockets):
+	global CONNECTION_ONLINE
 	global client_name
 	global current_money
 	global current_port
@@ -90,17 +91,23 @@ def threaded(sending_sockets):
 		elif user_input[0] == "D":
 			# turn off the server
 			# this is our way of simulating node failures
+			print("Simulating node failure... turning off server.")
 			halt_process = 1
 		elif user_input[0] == "E":
 			# turn on the server (halt = False)
+			print("Bringing server back up... done.")
 			halt_process = 0
 		elif user_input[0] == "F":
-			pass
+			print("The current leader is {}.".format(current_leader))
+			print("The current term is {}.".format(current_term))
+			print("The length of the blockchain is {}.".format(len(log)))
 		elif user_input[0] == "G":
 			CONNECTION_ONLINE = not CONNECTION_ONLINE
 			print("Connection online:", CONNECTION_ONLINE)
 		elif user_input[0] == "H":
-			break
+			for i, j in sending_sockets.items():
+				j.socket_object.shutdown(socket.SHUT_RDWR)
+				j.socket_object.close()
 			sys.exit()
 		else:
 			print("\nUser input not recognized. Try again (A-H).\n")
@@ -305,12 +312,16 @@ log = []
 self_votes = 0
 next_index = {}
 halt_process = 0
+has_recv_append = 0
+has_replicated = {}
 
 def read_socket(packet):
 	global queue_task
 	while True:
 		try:
-			data = packet.recv(2048)
+			data = packet.recv(4096)
+			# message_type = pickle.loads(data).message_type
+			# queue_task.put(data)
 			if data:
 				# need to split b/c of stupid read error
 				data = data.split(b'\x80')
@@ -334,10 +345,11 @@ def process(current_port):
 	global next_index
 	global queue_transactions
 	global halt_process
+	global has_recv_append
 
 	while True:
 		while queue_task.empty():
-			time.sleep(0.1)
+			time.sleep(0.01)
 		data = pickle.loads(queue_task.get())
 		if halt_process:
 			continue
@@ -368,6 +380,7 @@ def process(current_port):
 				next_index = {PORTS[0]: len(log), PORTS[1]: len(log), PORTS[2]: len(log)}
 				send_heartbeat(current_port)
 		elif data.message_type == "AppendEntriesRPC" and data.result_term == 0:
+			has_recv_append = 1
 			# ignore b/c older term
 			if data.term < current_term:
 				continue
@@ -401,6 +414,8 @@ def process(current_port):
 			if data.success == 0:
 				next_index[data.port_sender] -= 1
 			else:
+				if len(log) not in has_replicated:
+					has_replicated[len(log)] = 1
 				next_index[data.port_sender] = len(log)
 		elif data.message_type == "money":
 			queue_transactions.put(data.message_content)
@@ -415,6 +430,7 @@ def leader_alive():
 	global self_votes
 	global halt_process
 	global next_index
+	global has_recv_append
 
 	while True:
 		if not halt_process:
@@ -425,13 +441,15 @@ def leader_alive():
 					current_status = CANDIDATE
 					self_votes += 1
 					voted_for[current_term] = current_port
+					current_leader = current_port
 					send_request_vote(current_port, current_term)
 					heartbeat = 0
 				else:
 					heartbeat += 1
 			elif current_status == LEADER:
+				has_recv_append = 1
 				send_heartbeat(current_port)
-		time.sleep(random.randint(500, 2500)/1000)
+		time.sleep(random.randint(500, 1000)/2000)
 
 def get_balance():
 	global current_port
@@ -460,6 +478,8 @@ def send_heartbeat(current_port):
 	for host, socket in objects_socket_send.items():
 		if len(log) == 0:
 			send_message = AppendEntriesRPC(current_term, current_leader, 0, 0, 0, 0).pack()
+		elif next_index[host] == 0:
+			send_message = AppendEntriesRPC(current_term, current_leader, next_index[host] - 1, log[next_index[host]].current_term, log[next_index[host]:], 0).pack()
 		else:
 			send_message = AppendEntriesRPC(current_term, current_leader, next_index[host] - 1, log[next_index[host] - 1].current_term, log[next_index[host]:], 0).pack()
 		socket.send_to_socket(send_message)
@@ -506,9 +526,10 @@ def create_block():
 	global current_leader
 	global current_port
 	global current_status
+	global has_recv_append
 
 	# delay until leader elections is finished
-	while current_leader == 0:
+	while has_recv_append == 0:
 		time.sleep(0.01)
 
 	# empty out the queue if i'm the leader
@@ -518,7 +539,7 @@ def create_block():
 	while True:
 		# just wait if there aren't any transactions
 		while queue_transactions.empty():
-			time.sleep(0.1)
+			time.sleep(0.001)
 		data = queue_transactions.get()
 		if current_block == None:
 			# block #1 created here
@@ -545,8 +566,20 @@ def create_block():
 			# each site has its own index, which is just the length of its log 
 			# the log length should follow the current log's length
 			next_index = {PORTS[0]: len(log), PORTS[1]: len(log), PORTS[2]: len(log)}
+			while not check_replicated() or current_leader != current_port:
+				time.sleep(0.001)
+			if current_leader == current_port:
+				print("[#{}] Created block. Replication in process... done.".format(str(len(log))))
 			# since block has been added already, reset the variable
 			current_block = None
+
+def check_replicated():
+	global log
+	global has_replicated
+
+	if len(log) not in has_replicated:
+		return False
+	return True
 
 def main():
 	global current_port
@@ -576,13 +609,11 @@ def main():
 	for object in objects_socket_recv:
 		threads_recv.append(Thread(read_socket, (object,)).create_thread())
 
-	time.sleep(random.randint(0, 2500)/1000)
+	time.sleep(random.randint(0, 1500)/1000)
 	# initialize the input chain file
 	with open(INIT_BLOCKCHAIN_FILE, 'r') as file:
 		transactions = file.readlines()
 	transactions = [i.rstrip() for i in transactions]
-
-	# ! TODO: need to make a parsing function to turn A,B,C into 6001,6002,6003
 
 
 	# put each transaction into the queue for processing
