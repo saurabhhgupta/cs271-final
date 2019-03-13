@@ -12,9 +12,11 @@ import random
 import pickle
 import math
 import hashlib
+import struct
 from string import ascii_uppercase
 from string import digits
 from random import SystemRandom
+from math import ceil
 
 ########## Configuration setup ##########
 FILE = "config.json"
@@ -28,7 +30,8 @@ CHANNELS = {port : [i for i in PORTS if i != port] for port in PORTS}
 BALANCE = {port : data["BALANCE"][0] for port in PORTS}
 FOLLOWER, CANDIDATE, LEADER = data["FOLLOWER"], data["CANDIDATE"], data["LEADER"]
 CONNECTION_ONLINE = True
-INIT_BLOCKCHAIN_FILE = "init_chain.txt"
+INIT_BLOCKCHAIN_FILE = "input_100.txt"
+# INIT_BLOCKCHAIN_FILE = 'init_chain.txt'
 # majority is 2 b/c we have 3 sites
 MAJORITY = 2
 SOCKET_LISTEN_BOUND = 10
@@ -133,7 +136,18 @@ class Socket(object):
 
 	def send_to_socket(self, message):
 		try:
-			self.socket_object.send(message)
+			# obj_size = len(message)
+			# if obj_size > 2048:
+			# 	while len(message) > 2048:
+			# 		chunk = message[:2048]
+			# 		message = message[2048:]
+			# 		self.socket_object.send(chunk)
+			# 	self.socket_object.send(message)
+			# else:
+			# 	self.socket_object.send(message)
+			# self.socket_object.send(b'STOP')
+			# self.socket_object.sendall(message)
+			self.socket_object.sendall((struct.pack('>I', len(message))+message))
 		except socket.error as socket_error:
 			print("[{}] ERROR! Failed to send.".format(int(sys.argv[1])), socket_error)
 
@@ -306,20 +320,70 @@ self_votes = 0
 next_index = {}
 halt_process = 0
 
+# def read_socket(packet):
+# 	global queue_task
+# 	while True:
+# 		try:
+# 			data = packet.recv(2048)
+# 			if data:
+# 				# need to split b/c of stupid read error
+# 				data = data.split(b'\x80')
+# 				for chunk in data[1:]:
+# 					convert_to_bin = b'\x80' + chunk
+# 					message_type = pickle.loads(convert_to_bin).message_type
+# 					queue_task.put(convert_to_bin)
+# 		except OSError:
+# 			sys.exit()
+
+# def read_socket(packet):
+# 	global queue_task
+# 	while True:
+# 		try:
+# 			message = []
+# 			data = None
+# 			while True:
+# 				data = packet.recv(2048)
+# 				if data == b'STOP':
+# 					break
+# 				else:
+# 					message.append(data)
+# 			# need to split b/c of stupid read error
+# 			message = b''.join(message)
+# 			message = message.split(b'\x80')
+# 			for chunk in message[1:]:
+# 				convert_to_bin = b'\x80' + chunk
+# 				message_type = pickle.loads(convert_to_bin).message_type
+# 				queue_task.put(convert_to_bin)
+# 		except OSError:
+# 			sys.exit()
+
 def read_socket(packet):
 	global queue_task
 	while True:
 		try:
-			data = packet.recv(2048)
-			if data:
-				# need to split b/c of stupid read error
-				data = data.split(b'\x80')
-				for chunk in data[1:]:
-					convert_to_bin = b'\x80' + chunk
-					message_type = pickle.loads(convert_to_bin).message_type
-					queue_task.put(convert_to_bin)
+			raw_msglen = recvall(packet, 4)
+			if not raw_msglen:
+				return None
+			msglen = struct.unpack('>I', raw_msglen)[0]
+			message = recvall(packet, msglen)
+			queue_task.put(message)
+			# message = message.split(b'\x80')
+			# for chunk in message[1:]:
+			# 	convert_to_bin = b'\x80' + chunk
+			# 	message_type = pickle.loads(convert_to_bin).message_type
+			# 	queue_task.put(convert_to_bin)
 		except OSError:
 			sys.exit()
+
+def recvall(sock, n):
+    # Helper function to recv n bytes or return None if EOF is hit
+    data = b''
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet:
+            return None
+        data += packet
+    return data 
 
 def process(current_port):
 	global PORTS
